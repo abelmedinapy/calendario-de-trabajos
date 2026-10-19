@@ -8,6 +8,10 @@
 // La marca NO puede salir de index.html: Cloudflare lo redirige a / y ahí no
 // viene etag. Sale de los archivos de la app, que sí lo traen.
 
+// Lo reescribe publicar.mjs en cada publicación. Está a la vista en el tablero
+// para poder decir "estoy corriendo esta" sin adivinar.
+export const VERSION_APP = '2026-10-19T02-07-52';
+
 const MIRADOS = ['./src/app.js', './src/vista.js', './css/tablero.css'];
 
 export function hayQueRecargar(marcaVieja, marcaNueva) {
@@ -27,4 +31,15 @@ export async function marcaDelServidor(traer = fetch) {
   } catch {
     return null;
   }
+}
+
+// "2026-10-19T02-30-00" -> "19 oct 02:30"
+const MESES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun',
+               'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+
+export function versionLegible(sello) {
+  const m = String(sello).match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2})-(\d{2})/);
+  if (!m) return String(sello);
+  const [, , mes, dia, hora, minuto] = m;
+  return `${Number(dia)} ${MESES[Number(mes) - 1]} ${hora}:${minuto}`;
 }

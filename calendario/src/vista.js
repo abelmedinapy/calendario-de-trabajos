@@ -5,6 +5,7 @@ import { fechaLarga, nombreCorto, ventanaScrubber, diasDeAtraso, hoy as hoyReal 
 import { agruparPorProyecto, contadores } from './modelo.js';
 import { diasConTrabajo } from './arrastre.js';
 import { loQueDiceRender } from './render-dice.js';
+import { VERSION_APP, versionLegible } from './version.js';
 
 const DIAS_SCRUBBER = 12;
 const DEMASIADOS = 6;
@@ -150,7 +151,7 @@ export function scrubberHTML(estado, fecha, { hoy = hoyReal(), moviendo = false 
   return `<nav class="scrub${moviendo ? ' eligiendo' : ''}">${aviso}${celdas}</nav>`;
 }
 
-export function tableroHTML(estado, fecha, { editando = false, hoy = hoyReal(), moviendo = false } = {}) {
+export function tableroHTML(estado, fecha, { editando = false, hoy = hoyReal(), moviendo = false, version = VERSION_APP } = {}) {
   // Un proyecto sin tomas no ensucia la captura de un día ya cargado, pero si
   // el día está vacío tiene que verse: si no, cargás un proyecto, el tablero
   // sigue diciendo "no hay nada anotado" y lo cargás otra vez.
@@ -206,5 +207,6 @@ export function tableroHTML(estado, fecha, { editando = false, hoy = hoyReal(), 
 
   ${aviso}
   ${riel}
-  ${scrubberHTML(estado, fecha, { hoy, moviendo })}`;
+  ${scrubberHTML(estado, fecha, { hoy, moviendo })}
+  <p class="version">v ${escapar(versionLegible(version))}</p>`;
 }

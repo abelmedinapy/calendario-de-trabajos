@@ -8,6 +8,9 @@ const sello = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
 const sw = readFileSync('sw.js', 'utf-8')
   .replace(/const VERSION = '[^']*';/, `const VERSION = 'calendario-${sello}';`);
 writeFileSync('sw.js', sw);
-console.log(`service worker sellado: calendario-${sello}`);
+const version = readFileSync('src/version.js', 'utf-8')
+  .replace(/export const VERSION_APP = '[^']*';/, `export const VERSION_APP = '${sello}';`);
+writeFileSync('src/version.js', version);
+console.log(`sellado: ${sello}`);
 
 execFileSync('wrangler', ['deploy'], { stdio: 'inherit' });

@@ -474,3 +474,15 @@ test('la tarjeta trae un agarre para arrastrarla, y el agarre es lo que se arras
 test('en reposo no hay agarre', () => {
   assert.doesNotMatch(tarjetaHTML(unaToma()), /class="agarre"/);
 });
+
+test('el tablero muestra qué versión está corriendo', () => {
+  const html = tableroHTML(VACIO, HOY, { version: '2026-10-19T02-30-00' });
+  assert.match(html, /class="version"/);
+  assert.match(html, /19 oct 02:30/);
+});
+
+test('la versión se lee pero no se mete en el medio', () => {
+  const html = tableroHTML(VACIO, HOY, { version: '2026-10-19T02-30-00' });
+  // va al final, después del scrubber
+  assert.ok(html.indexOf('class="version"') > html.indexOf('class="scrub'), 'la versión va al final');
+});
