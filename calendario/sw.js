@@ -1,9 +1,13 @@
-// Los archivos de la app se piden a la red y se guardan de paso; si no hay red,
-// salen del cache. Al revés (cache primero) la app abría rápido pero se quedaba
-// con la versión vieja hasta que cambiara el nombre del cache, y entonces una
-// corrección podía no llegar nunca. La API nunca se guarda.
+// VERSION se reescribe sola en cada publicación (npm run publicar). Que cambie
+// este archivo es lo que hace que el navegador reinstale el worker, tire los
+// caches viejos y tome el control: sin eso se puede quedar con app.js de una
+// versión y vista.js de otra, y la app hace cosas a medias.
+import { listaDeArchivos } from './src/archivos.js';
 
-import { listaDeArchivos, VERSION } from './src/archivos.js';
+const VERSION = 'calendario-2026-10-19T02-05-54';
+
+// Los archivos de la app se piden a la red y se guardan de paso; si no hay red,
+// salen del cache. La API nunca se guarda.
 
 self.addEventListener('install', (evento) => {
   evento.waitUntil(

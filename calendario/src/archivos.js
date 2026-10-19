@@ -31,8 +31,6 @@ const ARCHIVOS = [
   './src/vista.js'
 ];
 
-export const VERSION = 'calendario-v3';
-
 export function listaDeArchivos() {
   return [...ARCHIVOS];
 }

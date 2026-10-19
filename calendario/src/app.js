@@ -398,7 +398,15 @@ function arrancar() {
   async function mirarSiHayVersionNueva() {
     if (escribiendo()) return;
     const ahora = await marcaDelServidor();
-    if (hayQueRecargar(marcaPropia, ahora)) location.reload();
+    if (!hayQueRecargar(marcaPropia, ahora)) return;
+    // Los caches se tiran antes de recargar: si no, el propio service worker
+    // puede volver a servir archivos de dos versiones mezcladas, que es
+    // exactamente lo que dejó botones que no hacían nada.
+    try {
+      const claves = await caches.keys();
+      await Promise.all(claves.map((c) => caches.delete(c)));
+    } catch { /* sin caches, se recarga igual */ }
+    location.reload();
   }
 
   document.addEventListener('visibilitychange', () => {

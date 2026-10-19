@@ -258,8 +258,9 @@ body{
 .card h3 u{
   text-decoration:none;font-size:11.5px;color:var(--dim);font-weight:500;
   background:var(--ink3);border-radius:7px;padding:3px 7px;
-  font-variant-numeric:tabular-nums;flex:0 1 auto;margin-top:1px;
-  overflow-wrap:anywhere;min-width:0;
+  font-variant-numeric:tabular-nums;flex:none;margin-top:1px;
+  /* Un código corto como M0035 no puede partirse en dos renglones. */
+  white-space:nowrap;max-width:45%;overflow:hidden;text-overflow:ellipsis;
 }
 .card h3 .que{overflow-wrap:anywhere;min-width:0}
 .card .late{
