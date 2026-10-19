@@ -1,3 +1,15 @@
+/* Las fuentes viven en el repo: la app se ve igual sin internet. */
+@font-face{
+  font-family:'Bricolage Grotesque';
+  src:url(../assets/fonts/bricolage-grotesque.woff2) format('woff2');
+  font-weight:400 600;font-style:normal;font-display:swap;
+}
+@font-face{
+  font-family:Figtree;
+  src:url(../assets/fonts/figtree.woff2) format('woff2');
+  font-weight:400 700;font-style:normal;font-display:swap;
+}
+
 /* El tablero del día. Modo oscuro siempre: no hay tema claro. */
 
 :root{
