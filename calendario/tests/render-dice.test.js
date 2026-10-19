@@ -27,17 +27,17 @@ test('si el día tiene texto escrito a mano, gana ese', () => {
 
 test('cuenta lo que quedó sin cerrar y nombra el proyecto cuando es uno solo', () => {
   assert.equal(loQueDiceRender(arrastradas(3), HOY),
-    'Ayer quedaron 3 trabajos de Fortaleza sin cerrar.');
+    'Ayer quedaron 3 trabajos de Fortaleza.');
 });
 
 test('con varios proyectos no nombra ninguno', () => {
   assert.equal(loQueDiceRender(arrastradas(5, ['p1', 'p2']), HOY),
-    'Ayer quedaron 5 trabajos sin cerrar.');
+    'Ayer quedaron 5 trabajos.');
 });
 
 test('un solo trabajo va en singular', () => {
   assert.equal(loQueDiceRender(arrastradas(1), HOY),
-    'Ayer quedó 1 trabajo de Fortaleza sin cerrar.');
+    'Ayer quedó 1 trabajo de Fortaleza.');
 });
 
 test('si no quedó nada pendiente, saluda sin inventar', () => {
@@ -68,7 +68,7 @@ test('los trabajos hechos no cuentan como arrastrados', () => {
       { id: 't2', proyecto: 'p1', queHacer: 'y', diaOrigen: '2026-10-17', diaActual: HOY }
     ]
   });
-  assert.equal(loQueDiceRender(estado, HOY), 'Ayer quedó 1 trabajo de Fortaleza sin cerrar.');
+  assert.equal(loQueDiceRender(estado, HOY), 'Ayer quedó 1 trabajo de Fortaleza.');
 });
 
 test('nunca dice una hora', () => {
@@ -79,7 +79,7 @@ test('nunca dice una hora', () => {
 
 test('RENDER también habla de trabajos, no de tomas', () => {
   assert.equal(loQueDiceRender(arrastradas(3), HOY),
-    'Ayer quedaron 3 trabajos de Fortaleza sin cerrar.');
+    'Ayer quedaron 3 trabajos de Fortaleza.');
   assert.equal(loQueDiceRender(arrastradas(1), HOY),
-    'Ayer quedó 1 trabajo de Fortaleza sin cerrar.');
+    'Ayer quedó 1 trabajo de Fortaleza.');
 });
