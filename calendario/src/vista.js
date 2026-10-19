@@ -72,22 +72,23 @@ export function tarjetaHTML(toma, { editando = false } = {}) {
   </article>`;
 }
 
-function chipHTML(toma) {
+function chipHTML(toma, cara = 0) {
   const codigo = toma.codigo ? `${escapar(toma.codigo)} · ` : '';
   return `<span class="chip" data-toma="${escapar(toma.id)}">
-    <button class="marca" data-accion="hecha" aria-label="Volver a pendiente">✓</button>
+    <button class="marca" data-accion="hecha" aria-label="Volver a pendiente">
+      <span class="mini" data-cara="${cara % 3}"></span></button>
     <s>${codigo}${escapar(toma.queHacer)}</s>
     <button class="oculto borrar chico" data-accion="borrar-toma" aria-label="Borrar el trabajo">×</button></span>`;
 }
 
-function columnaHTML(grupo, editando) {
+function columnaHTML(grupo, editando, desdeCara = 0) {
   const escribible = (campo, vacio) => editando
     ? ` contenteditable="plaintext-only" data-campo="${campo}" data-vacio="${escapar(vacio)}"`
     : '';
   const etiqueta = (grupo.proyecto.etiqueta || editando)
     ? `<span${escribible('etiqueta', 'VFX, Spot…')}>${escapar(grupo.proyecto.etiqueta)}</span>` : '';
   const chips = grupo.hechas.length
-    ? `<div class="chips">${grupo.hechas.map(chipHTML).join('')}</div>` : '';
+    ? `<div class="chips">${grupo.hechas.map((t, i) => chipHTML(t, desdeCara + i)).join('')}</div>` : '';
   return `<div class="col ${escapar(grupo.proyecto.color)}" data-proyecto="${escapar(grupo.proyecto.id)}">
     <span class="node"></span>
     <div class="elbow"></div>
@@ -130,7 +131,7 @@ export function tableroHTML(estado, fecha, { editando = false, hoy = hoyReal() }
     : '';
 
   const riel = grupos.length
-    ? `<div class="rail"><div class="cols">${grupos.map((g) => columnaHTML(g, editando)).join('')}</div>
+    ? `<div class="rail"><div class="cols">${grupos.map((g, i, todos) => columnaHTML(g, editando, todos.slice(0, i).reduce((n, x) => n + x.hechas.length, 0))).join('')}</div>
         <button class="oculto suma nuevo" data-accion="nuevo-proyecto">Agregar proyecto</button></div>`
     : `<div class="rail vacio"><p>Todavía no hay nada anotado para hoy.</p>
         <button class="agregar" data-accion="nuevo-proyecto">Agregar proyecto</button></div>`;
@@ -155,6 +156,9 @@ export function tableroHTML(estado, fecha, { editando = false, hoy = hoyReal() }
       <div class="lbl">Objetivo del día</div>
       <p contenteditable="plaintext-only" data-accion="objetivo"
          data-vacio="Escribí el objetivo del día">${objetivo}</p>
+    </div>
+    <div class="am" data-avance="${n.tomas ? Math.round((n.listas / n.tomas) * 100) : 0}">
+      <img src="./assets/am.png" alt="" width="60" height="68">
     </div>
     <div class="stats">
       <div class="stat"><span class="lbl">Proyectos</span><i>${n.proyectos}</i></div>

@@ -275,3 +275,42 @@ test('el día abierto se marca fuerte en el scrubber', () => {
   assert.match(html, /class="day[^"]*abierto[^"]*"[^>]*data-dia="2026-10-21"/);
   assert.match(html, /class="day[^"]*hoy[^"]*"[^>]*data-dia="2026-10-18"/);
 });
+
+test('cada trabajo terminado deja un mini AM en su chip', () => {
+  const estado = normalizarEstado({
+    proyectos: [{ id: 'p1', nombre: 'Fortaleza' }],
+    tomas: [
+      { id: 't1', proyecto: 'p1', queHacer: 'a', diaActual: HOY, hecha: true },
+      { id: 't2', proyecto: 'p1', queHacer: 'b', diaActual: HOY, hecha: true },
+      { id: 't3', proyecto: 'p1', queHacer: 'c', diaActual: HOY, hecha: true },
+      { id: 't4', proyecto: 'p1', queHacer: 'd', diaActual: HOY, hecha: true }
+    ]
+  });
+  const html = tableroHTML(estado, HOY);
+  assert.equal(cuantos(html, /class="mini"/g), 4);
+  // las tres caras se van turnando, para que no sean cuatro clones
+  for (const cara of ['0', '1', '2']) {
+    assert.match(html, new RegExp(`data-cara="${cara}"`), `falta la cara ${cara}`);
+  }
+});
+
+test('un trabajo sin terminar no tiene mini', () => {
+  assert.doesNotMatch(tarjetaHTML(unaToma()), /class="mini"/);
+});
+
+test('AM está en el tablero y dice cómo viene el día', () => {
+  const estado = normalizarEstado({
+    proyectos: [{ id: 'p1', nombre: 'Fortaleza' }],
+    tomas: [
+      { id: 't1', proyecto: 'p1', queHacer: 'a', diaActual: HOY, hecha: true },
+      { id: 't2', proyecto: 'p1', queHacer: 'b', diaActual: HOY }
+    ]
+  });
+  const html = tableroHTML(estado, HOY);
+  assert.match(html, /class="am"/);
+  assert.match(html, /data-avance="50"/);
+});
+
+test('sin nada anotado AM no muestra avance inventado', () => {
+  assert.match(tableroHTML(VACIO, HOY), /data-avance="0"/);
+});

@@ -9,6 +9,8 @@ const ARCHIVOS = [
   './assets/fonts/bricolage-grotesque.woff2',
   './assets/fonts/figtree.woff2',
   './assets/render.png',
+  './assets/am.png',
+  './assets/am-minis.png',
   './assets/icon-192.png',
   './assets/icon-512.png',
   './assets/icon-maskable-512.png',
@@ -28,7 +30,7 @@ const ARCHIVOS = [
   './src/vista.js'
 ];
 
-export const VERSION = 'calendario-v1';
+export const VERSION = 'calendario-v2';
 
 export function listaDeArchivos() {
   return [...ARCHIVOS];

@@ -126,6 +126,44 @@ body{
 
 .aviso{margin:16px 8px 0;font-size:13px;color:var(--dim)}
 
+/* AM mira cómo viene el día: pega un salto cada tanto, y más seguido cuanto
+   más cerrás. Es el único movimiento que no responde a un clic, así que es
+   lento y se apaga para quien pidió menos animación. */
+.am{flex:none;align-self:flex-end;line-height:0}
+.am img{
+  image-rendering:pixelated;display:block;width:60px;height:auto;
+  filter:drop-shadow(0 4px 6px rgba(0,0,0,.45));
+  animation:salto 5.5s ease-in-out infinite;
+  transform-origin:50% 100%;
+}
+.am[data-avance="0"] img{animation-duration:9s}
+.am[data-avance="100"] img{animation-duration:2.4s}
+
+@keyframes salto{
+  0%,72%,100%{transform:translateY(0) scaleY(1)}
+  76%{transform:translateY(0) scaleY(.88)}
+  84%{transform:translateY(-9px) scaleY(1.04)}
+  92%{transform:translateY(0) scaleY(.95)}
+  96%{transform:translateY(0) scaleY(1)}
+}
+
+/* Cada trabajo cerrado deja un mini AM. Son tres caras que se van turnando:
+   la fila de minis es el día que se va llenando. */
+.mini{
+  display:block;width:20px;height:23px;
+  background-image:url(../assets/am-minis.png);
+  background-size:300% 100%;
+  background-repeat:no-repeat;
+  image-rendering:pixelated;
+}
+.mini[data-cara="0"]{background-position:0% 50%}
+.mini[data-cara="1"]{background-position:50% 50%}
+.mini[data-cara="2"]{background-position:100% 50%}
+
+@media (prefers-reduced-motion:reduce){
+  .am img{animation:none}
+}
+
 /* ---------- el riel ---------- */
 .rail{margin:30px 4px 0}
 .cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:22px 22px}
@@ -171,11 +209,11 @@ body{
   font-size:13px;color:var(--dim);min-width:0;
 }
 .chip .marca{
-  width:24px;height:24px;border-radius:50%;background:var(--ok);color:#10261A;
-  display:grid;place-items:center;font-size:11px;flex:none;
-  border:0;font-family:inherit;cursor:pointer;padding:0;
+  width:26px;height:26px;border-radius:50%;background:var(--ink3);
+  display:grid;place-items:center;flex:none;
+  border:0;font-family:inherit;cursor:pointer;padding:0;overflow:hidden;
 }
-.chip .marca:hover,.chip .marca:focus-visible{background:var(--fg);outline:none}
+.chip .marca:hover,.chip .marca:focus-visible{background:var(--ok);outline:none}
 .oculto.chico{padding:2px 8px;font-size:14px;line-height:1}
 .chip s{text-decoration:line-through;text-decoration-color:var(--line);overflow-wrap:anywhere}
 
