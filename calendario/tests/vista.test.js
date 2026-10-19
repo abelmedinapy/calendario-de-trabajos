@@ -437,9 +437,9 @@ test('cada trabajo trae sus flechas para subir y bajar, ocultas', () => {
   assert.match(html, /class="oculto[^"]*"[^>]*data-accion="bajar"/);
 });
 
-test('en modo editar la tarjeta se puede arrastrar', () => {
-  assert.match(tarjetaHTML(unaToma(), { editando: true }), /draggable="true"/);
-  assert.doesNotMatch(tarjetaHTML(unaToma()), /draggable="true"/);
+test('el agarre solo aparece en modo editar', () => {
+  assert.match(tarjetaHTML(unaToma(), { editando: true }), /class="agarre"/);
+  assert.doesNotMatch(tarjetaHTML(unaToma()), /class="agarre"/);
 });
 
 test('un proyecto en pausa lo dice en el tablero', () => {
@@ -465,10 +465,10 @@ test('el botón dice reanudar cuando ya está en pausa', () => {
   assert.match(tableroHTML(estado, HOY), /data-accion="pausar">Reanudar</);
 });
 
-test('la tarjeta trae un agarre para arrastrarla, y el agarre es lo que se arrastra', () => {
+test('la tarjeta trae un agarre, y es lo único de donde se la puede agarrar', () => {
   const html = tarjetaHTML(unaToma(), { editando: true });
-  assert.match(html, /class="agarre"[^>]*draggable="true"/);
-  assert.doesNotMatch(html, /<article[^>]*draggable="true"/);
+  assert.match(html, /class="agarre"/);
+  assert.doesNotMatch(html, /<article[^>]*agarre/);
 });
 
 test('en reposo no hay agarre', () => {
@@ -485,4 +485,15 @@ test('la versión se lee pero no se mete en el medio', () => {
   const html = tableroHTML(VACIO, HOY, { version: '2026-10-19T02-30-00' });
   // va al final, después del scrubber
   assert.ok(html.indexOf('class="version"') > html.indexOf('class="scrub'), 'la versión va al final');
+});
+
+test('el agarre no usa el arrastre de HTML: en Safari y en el celular no anda', () => {
+  const html = tarjetaHTML(unaToma(), { editando: true });
+  assert.match(html, /class="agarre"/);
+  assert.doesNotMatch(html, /draggable="true"/);
+});
+
+test('AM anda con tres mini AM alrededor', () => {
+  const html = tableroHTML(conProyectos(1), HOY);
+  assert.equal(cuantos(html, /class="mini suelto"/g), 3);
 });

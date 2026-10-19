@@ -529,44 +529,59 @@ export function conectar(raiz, acciones) {
     });
   });
 
-  // Arrastrar una tarjeta para cambiar el orden. En táctil no hay arrastre, y
-  // por eso las flechas hacen lo mismo.
-  let arrastrando = null;
+  // Arrastrar con eventos de puntero, no con el arrastre de HTML: ese no anda
+  // en Safari sobre elementos cualquiera y directamente no existe en táctil.
+  // Con punteros funciona igual en la compu y en el celular.
+  let agarrado = null;
 
-  raiz.addEventListener('dragstart', (evento) => {
-    // Se arrastra desde el agarre, no desde cualquier lado de la tarjeta: el
-    // resto es texto que se escribe y se selecciona.
-    if (!evento.target.closest?.('.agarre')) return;
-    const tarjeta = evento.target.closest?.('[data-toma]');
-    if (!tarjeta) return;
-    arrastrando = tarjeta.dataset.toma;
-    tarjeta.classList.add('arrastrando');
-    evento.dataTransfer.effectAllowed = 'move';
-    // Firefox no arranca el arrastre si no se le pone algo adentro.
-    evento.dataTransfer.setData('text/plain', arrastrando);
-  });
+  const tarjetasHermanas = (tarjeta) =>
+    [...tarjeta.closest('[data-proyecto]').querySelectorAll('.card')];
 
-  raiz.addEventListener('dragover', (evento) => {
-    if (!arrastrando) return;
-    const tarjeta = evento.target.closest?.('[data-toma]');
-    if (!tarjeta || tarjeta.dataset.toma === arrastrando) return;
-    evento.preventDefault();
-    for (const otra of raiz.querySelectorAll('.destino')) otra.classList.remove('destino');
-    tarjeta.classList.add('destino');
-  });
+  // Sobre qué tarjeta está el dedo o el mouse, por posición y no por el
+  // elemento de abajo: mientras se arrastra, abajo está la tarjeta agarrada.
+  function tarjetaBajo(y, tarjeta) {
+    return tarjetasHermanas(tarjeta).find((otra) => {
+      if (otra === tarjeta) return false;
+      const caja = otra.getBoundingClientRect();
+      return y >= caja.top && y <= caja.bottom;
+    });
+  }
 
-  raiz.addEventListener('drop', (evento) => {
-    const tarjeta = evento.target.closest?.('[data-toma]');
-    if (!arrastrando || !tarjeta) return;
-    evento.preventDefault();
-    acciones.soltar?.({ toma: arrastrando, destino: tarjeta.dataset.toma });
-    arrastrando = null;
-  });
-
-  raiz.addEventListener('dragend', () => {
-    arrastrando = null;
+  function limpiarMarcas() {
     for (const otra of raiz.querySelectorAll('.arrastrando, .destino')) {
       otra.classList.remove('arrastrando', 'destino');
     }
+  }
+
+  raiz.addEventListener('pointerdown', (evento) => {
+    const agarre = evento.target.closest?.('.agarre');
+    if (!agarre) return;
+    const tarjeta = agarre.closest('[data-toma]');
+    if (!tarjeta) return;
+    evento.preventDefault();
+    agarrado = { tarjeta, id: tarjeta.dataset.toma, destino: null };
+    tarjeta.classList.add('arrastrando');
+    agarre.setPointerCapture?.(evento.pointerId);
   });
+
+  raiz.addEventListener('pointermove', (evento) => {
+    if (!agarrado) return;
+    evento.preventDefault();
+    const encima = tarjetaBajo(evento.clientY, agarrado.tarjeta);
+    if (encima === agarrado.destino) return;
+    for (const otra of raiz.querySelectorAll('.destino')) otra.classList.remove('destino');
+    agarrado.destino = encima || null;
+    if (encima) encima.classList.add('destino');
+  });
+
+  function soltar() {
+    if (!agarrado) return;
+    const { id, destino } = agarrado;
+    agarrado = null;
+    limpiarMarcas();
+    if (destino) acciones.soltar?.({ toma: id, destino: destino.dataset.toma });
+  }
+
+  raiz.addEventListener('pointerup', soltar);
+  raiz.addEventListener('pointercancel', () => { agarrado = null; limpiarMarcas(); });
 }

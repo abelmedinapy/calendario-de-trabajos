@@ -90,7 +90,7 @@ export function tarjetaHTML(toma, { editando = false, hoy = hoyReal() } = {}) {
     : '';
 
   const agarre = editando
-    ? '<span class="agarre" draggable="true" title="Arrastrar para cambiar el orden">⠿</span>'
+    ? '<span class="agarre" title="Arrastrar para cambiar el orden">⠿</span>'
     : '';
   return `<article class="card${toma.enCurso ? ' live' : ''}" data-toma="${escapar(toma.id)}">
     ${agarre}
@@ -196,6 +196,9 @@ export function tableroHTML(estado, fecha, { editando = false, hoy = hoyReal(), 
          data-vacio="Escribí el objetivo del día">${objetivo}</p>
     </div>
     <div class="am" data-avance="${n.tomas ? Math.round((n.listas / n.tomas) * 100) : 0}">
+      <span class="mini suelto" data-cara="0"></span>
+      <span class="mini suelto" data-cara="1"></span>
+      <span class="mini suelto" data-cara="2"></span>
       <img src="./assets/am.png" alt="" width="60" height="68">
     </div>
     <div class="stats">
