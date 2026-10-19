@@ -27,10 +27,11 @@ const ARCHIVOS = [
   './src/nube.js',
   './src/render-dice.js',
   './src/sync.js',
+  './src/version.js',
   './src/vista.js'
 ];
 
-export const VERSION = 'calendario-v2';
+export const VERSION = 'calendario-v3';
 
 export function listaDeArchivos() {
   return [...ARCHIVOS];

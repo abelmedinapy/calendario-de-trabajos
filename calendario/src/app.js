@@ -3,6 +3,7 @@
 
 import { LLAVE_GUARDADA } from './config.js';
 import { hoy } from './dia.js';
+import { hayQueRecargar, marcaDelServidor } from './version.js';
 import { crearAlmacen } from './almacen-local.js';
 import { crearNube } from './nube.js';
 import { sincronizar } from './sync.js';
@@ -388,8 +389,21 @@ function arrancar() {
   // Una PWA instalada en el celu casi nunca se cierra: al volver a mirarla hay
   // que traer lo que se anotó en la Mac, y si cruzó las 5 de la mañana, empezar
   // el día nuevo con lo pendiente arrastrado.
+  // La app queda abierta días: cada vez que se vuelve a mirar, se chequea si
+  // hay una versión más nueva publicada y se recarga sola. Nunca mientras se
+  // está escribiendo.
+  let marcaPropia = null;
+  marcaDelServidor().then((m) => { marcaPropia = m; });
+
+  async function mirarSiHayVersionNueva() {
+    if (escribiendo()) return;
+    const ahora = await marcaDelServidor();
+    if (hayQueRecargar(marcaPropia, ahora)) location.reload();
+  }
+
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState !== 'visible') return;
+    mirarSiHayVersionNueva();
     const ahora = hoy();
     if (ahora !== dia) {
       dia = ahora;
