@@ -15,6 +15,7 @@ const ARCHIVOS = [
   './assets/icon-512.png',
   './assets/icon-maskable-512.png',
   './assets/apple-touch-icon.png',
+  './apple-touch-icon.png',
   './src/app.js',
   './src/almacen-local.js',
   './src/archivos.js',

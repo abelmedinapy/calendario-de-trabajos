@@ -36,7 +36,13 @@ body{
   color:var(--fg);
   font-family:Figtree,system-ui,sans-serif;
   -webkit-font-smoothing:antialiased;
+  /* La app va de borde a borde (viewport-fit=cover), así que hay que dejarle
+     lugar a las esquinas redondeadas y a la barra de inicio del iPhone: si no,
+     se come el costado derecho. */
   padding:24px 24px 0;
+  padding-left:max(24px, env(safe-area-inset-left));
+  padding-right:max(24px, env(safe-area-inset-right));
+  padding-top:max(24px, env(safe-area-inset-top));
 }
 
 #tablero{
@@ -243,7 +249,7 @@ body{
 }
 .card:hover .agarre,.col:focus-within .agarre,#tablero.editando .agarre,.card:hover .agarre{opacity:.8}
 /* La cápsula se agarra de cualquier lado menos de su texto y sus botones. */
-.card{cursor:grab}
+.card{cursor:grab;touch-action:pan-y}
 .card:active{cursor:grabbing}
 .card [data-campo]{cursor:text}
 .card button{cursor:pointer}
@@ -427,9 +433,27 @@ body{
   padding:0 10px 10px;font-variant-numeric:tabular-nums;
 }
 
+/* Con el dedo, el agarre es lo único de donde se puede arrastrar: más ancho
+   para poder tomarlo, y siempre visible, que en táctil no hay hover. */
+@media (hover:none){
+  .agarre{opacity:.85;padding:14px 10px;font-size:17px}
+  .card{padding-left:30px}
+
+  /* iOS hace zoom solo al tocar un campo con letra menor a 16px, y después la
+     pantalla queda corrida y se pierde el lado derecho. Con 16 no zoomea. */
+  [data-campo],[data-accion="objetivo"],[data-valor]{font-size:16px}
+  .card p[data-campo]{line-height:1.4}
+}
+
 /* ---------- celular ---------- */
 @media (max-width:720px){
-  body{padding:12px 12px 0}
+  body{
+    padding:12px 12px 0;
+    padding-left:max(12px, env(safe-area-inset-left));
+    padding-right:max(12px, env(safe-area-inset-right));
+    padding-top:max(12px, env(safe-area-inset-top));
+  }
+  #tablero{padding-bottom:env(safe-area-inset-bottom)}
   #tablero{border-radius:26px;padding:8px 10px 0}
   .top{padding:12px 8px 0}
   .title{font-size:30px}

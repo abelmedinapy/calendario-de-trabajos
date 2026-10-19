@@ -548,13 +548,18 @@ export function conectar(raiz, acciones) {
   // responder a un toque simple.
   const UMBRAL = 5;
 
-  // Se agarra de cualquier parte de la tarjeta, no de un tirador de siete
-  // píxeles que no se encuentra. Quedan afuera los campos de texto y los
-  // botones, que tienen su propio trabajo.
+  const esDedo = (evento) =>
+    evento.pointerType === 'touch' || Boolean(evento.touches);
+
+  // Con el mouse se agarra de cualquier parte de la tarjeta. Con el dedo NO:
+  // ahí un arrastre vertical y un scroll son el mismo gesto, y scrolleando se
+  // terminaba moviendo trabajos sin querer. Con el dedo se agarra solo de las
+  // puntitas, que es lo único que no scrollea.
   function empezarAgarre(evento) {
     if (agarrado) return;
     const destinoDelDedo = evento.target;
     if (destinoDelDedo.closest?.('[data-campo], button, [data-accion]')) return;
+    if (esDedo(evento) && !destinoDelDedo.closest?.('.agarre')) return;
     const tarjeta = destinoDelDedo.closest?.('[data-toma]');
     if (!tarjeta || !tarjeta.classList.contains('card')) return;
     // Sin preventDefault acá: todavía no se sabe si es un clic o un arrastre.
