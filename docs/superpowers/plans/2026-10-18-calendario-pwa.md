@@ -657,7 +657,6 @@ git commit -m "feat: entrar una vez por aparato y arrancar sin esperar la red"
 ### Task 12: Publicar
 
 **Files:**
-- Create: `calendario/.github/workflows/pages.yml`
 - Modify: `calendario/README.md`
 
 **Interfaces:**
@@ -669,21 +668,22 @@ git commit -m "feat: entrar una vez por aparato y arrancar sin esperar la red"
 Run: `cd calendario && npm test`
 Expected: PASS, sin tests salteados.
 
-- [ ] **Step 2: Crear el repo público y publicarlo**
+- [ ] **Step 2: Desplegar la última versión y comprobarla**
 
-Repo público en `abelmedinapy`, GitHub Pages desde la rama principal con el workflow. Esperar el primer despliegue.
+`wrangler deploy`, y después, contra la URL publicada: sin llave 401, con la llave 200, la página 200, y los archivos de la app servidos (`css/tablero.css`, `src/app.js`, las dos fuentes).
 
-- [ ] **Step 3: Probar la app publicada en los tres aparatos**
+- [ ] **Step 3: Crear el repositorio público y subirlo**
 
-Entrar en la Mac, anotar un día con tres proyectos. Entrar en el celu y ver lo mismo. Instalarla en el celu, poner el aparato en modo avión, marcar una toma como hecha, volver a tener red y ver que el cambio llegó a la Mac.
+Repo público en `abelmedinapy`, con la rama de trabajo subida. La llave no está en el repo: vive como secreto del Worker.
 
 - [ ] **Step 4: Escribir el README**
 
-Qué es, cómo se corre local, cómo se corren los tests, dónde está el esquema, y que la clave publicable está en el repo a propósito porque lo que protege los datos es RLS.
+Qué es, cómo se corre local, cómo se corren los tests, dónde está el esquema, dónde está la llave, y cómo se despliega.
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 5: Commit y lo que queda para Abel**
+
+Dejar anotado qué falta probar en los aparatos de verdad: instalar en el celu, modo avión, y que lo anotado en la Mac aparezca en el celu. Eso lo hace él, porque pide escribir la llave.
 
 ```bash
-git add calendario/.github calendario/README.md
-git commit -m "chore: publicar en GitHub Pages"
+git add calendario/README.md && git commit -m "chore: publicar en Cloudflare"
 ```
