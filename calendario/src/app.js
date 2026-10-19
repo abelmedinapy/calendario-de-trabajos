@@ -389,9 +389,13 @@ function arrancar() {
   // Una PWA instalada en el celu casi nunca se cierra: al volver a mirarla hay
   // que traer lo que se anotó en la Mac, y si cruzó las 5 de la mañana, empezar
   // el día nuevo con lo pendiente arrastrado.
-  // La app queda abierta días: cada vez que se vuelve a mirar, se chequea si
-  // hay una versión más nueva publicada y se recarga sola. Nunca mientras se
-  // está escribiendo.
+  // La app queda abierta días. Hay que mirar seguido dos cosas: si cambió el
+  // día (para arrastrar lo pendiente) y si hay una versión nueva publicada.
+  //
+  // `visibilitychange` solo no alcanza: en la Mac, tener la ventana detrás de
+  // otra no cambia la visibilidad del documento, así que la app podía pasar
+  // toda la noche abierta y a la mañana seguir mostrando el día de ayer. Por
+  // eso también se mira al volver el foco y cada pocos minutos.
   let marcaPropia = null;
   marcaDelServidor().then((m) => { marcaPropia = m; });
 
@@ -399,9 +403,6 @@ function arrancar() {
     if (escribiendo()) return;
     const ahora = await marcaDelServidor();
     if (!hayQueRecargar(marcaPropia, ahora)) return;
-    // Los caches se tiran antes de recargar: si no, el propio service worker
-    // puede volver a servir archivos de dos versiones mezcladas, que es
-    // exactamente lo que dejó botones que no hacían nada.
     try {
       const claves = await caches.keys();
       await Promise.all(claves.map((c) => caches.delete(c)));
@@ -409,17 +410,24 @@ function arrancar() {
     location.reload();
   }
 
-  document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState !== 'visible') return;
-    mirarSiHayVersionNueva();
+  function mirarSiCambioElDia() {
+    if (escribiendo()) return;
     const ahora = hoy();
-    if (ahora !== dia) {
-      dia = ahora;
-      empezar();
-    } else {
-      subir();
-    }
+    if (ahora === dia) return;
+    dia = ahora;
+    empezar();
+  }
+
+  function revisar() {
+    mirarSiCambioElDia();
+    mirarSiHayVersionNueva();
+  }
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') revisar();
   });
+  window.addEventListener('focus', revisar);
+  setInterval(revisar, 4 * 60 * 1000);
 
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('./sw.js', { type: 'module' }).catch(() => {
