@@ -1,7 +1,7 @@
 // Los datos entran, sale HTML. No se toca el DOM acá: así la vista se puede
 // probar sin navegador y el DOM queda solo en editar.js y app.js.
 
-import { fechaLarga, nombreCorto, ventanaScrubber, diasDeAtraso, hoy as hoyReal } from './dia.js';
+import { fechaLarga, nombreCorto, ventanaScrubber, hoy as hoyReal } from './dia.js';
 import { agruparPorProyecto, contadores } from './modelo.js';
 import { diasConTrabajo } from './arrastre.js';
 import { loQueDiceRender } from './render-dice.js';
@@ -73,10 +73,6 @@ function elegirGraficoHTML(toma, editando) {
 // así que la captura no se toca sin querer y no hay nada de más en la foto.
 export function tarjetaHTML(toma, { editando = false, hoy = hoyReal() } = {}) {
   // Lo que mandaste a un día futuro no está atrasado: lo decidiste vos.
-  const atraso = toma.diaActual <= hoy ? diasDeAtraso(toma.diaOrigen, toma.diaActual) : 0;
-  const arrastrada = atraso > 0
-    ? `<span class="late">${atraso} ${atraso === 1 ? 'día' : 'días'}</span>`
-    : '';
 
   // Lo que ya tiene texto se puede escribir siempre: se hace clic en la
   // cápsula que uno quiere y se escribe, sin prender ningún modo. Los campos
@@ -97,7 +93,7 @@ export function tarjetaHTML(toma, { editando = false, hoy = hoyReal() } = {}) {
     : '';
   return `<article class="card${toma.enCurso ? ' live' : ''}" data-toma="${escapar(toma.id)}">
     ${agarre}
-    <h3>${codigo}<span class="que"${escribible('queHacer', '¿Qué hay que hacer?')}>${escapar(toma.queHacer)}</span>${arrastrada}
+    <h3>${codigo}<span class="que"${escribible('queHacer', '¿Qué hay que hacer?')}>${escapar(toma.queHacer)}</span>
       <button class="mark" data-accion="hecha" aria-label="Marcar como hecha"></button></h3>
     ${detalle}
     ${graficoHTML(toma, editando)}

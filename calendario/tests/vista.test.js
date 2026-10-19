@@ -62,12 +62,10 @@ test('la tarjeta dibuja el gráfico que pide la toma', () => {
   assert.doesNotMatch(pelada, /class="layers"|<svg|class="strip"/);
 });
 
-test('una toma arrastrada dice cuántos días lleva', () => {
-  assert.match(tarjetaHTML(unaToma({ diaOrigen: '2026-10-15', diaActual: HOY })), /3 días/);
-});
-
-test('una toma de hoy no dice nada de días', () => {
-  assert.doesNotMatch(tarjetaHTML(unaToma()), /días/);
+test('la tarjeta no anuncia cuántos días lleva arrastrándose', () => {
+  // Con todo pasando solo de un día al otro, ese cartelito aparecía en casi
+  // todas las tarjetas y era puro ruido.
+  assert.doesNotMatch(tarjetaHTML(unaToma({ diaOrigen: '2026-10-15', diaActual: HOY })), /3 días/);
 });
 
 test('un día sin proyectos invita a anotar', () => {
@@ -425,11 +423,6 @@ test('el tablero deja elegir el gráfico de cada trabajo en modo editar', () => 
 test('lo que mandaste a un día futuro no figura como atrasado', () => {
   const futuro = unaToma({ diaOrigen: HOY, diaActual: '2026-10-21' });
   assert.doesNotMatch(tarjetaHTML(futuro, { hoy: HOY }), /class="late"/);
-});
-
-test('lo que viene arrastrándose de antes sí dice cuántos días lleva', () => {
-  const viejo = unaToma({ diaOrigen: '2026-10-15', diaActual: HOY });
-  assert.match(tarjetaHTML(viejo, { hoy: HOY }), /3 días/);
 });
 
 test('cada trabajo trae su botón de mover de día, oculto como el de borrar', () => {

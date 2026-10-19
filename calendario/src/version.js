@@ -10,7 +10,7 @@
 
 // Lo reescribe publicar.mjs en cada publicación. Está a la vista en el tablero
 // para poder decir "estoy corriendo esta" sin adivinar.
-export const VERSION_APP = '2026-10-19T09-49-46';
+export const VERSION_APP = '2026-10-19T10-28-24';
 
 const MIRADOS = ['./src/app.js', './src/vista.js', './css/tablero.css'];
 
