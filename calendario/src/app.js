@@ -13,7 +13,7 @@ import {
   subirTrabajo, bajarTrabajo, soltarAntesDe,
   ponerTextoDeToma, ponerTextoDeProyecto,
   agregarBorradorDeToma, agregarBorradorDeProyecto, quitarBorradorVacio,
-  limpiarBorradores, borrar,
+  limpiarBorradores, pausarProyecto, borrar,
   ponerGrafico, ponerValorDeGrafico
 } from './editar.js';
 
@@ -278,6 +278,12 @@ function arrancar() {
       editando = true;
       dibujar();
       enfocar('[data-campo="queHacer"]:empty');
+    },
+
+    pausar: ({ proyecto }) => {
+      soltarElCampo();
+      const { estado: nuevo, cambios } = pausarProyecto(estado, proyecto);
+      guardar(nuevo, cambios);
     },
 
     subir: ({ toma }) => {

@@ -441,3 +441,26 @@ test('en modo editar la tarjeta se puede arrastrar', () => {
   assert.match(tarjetaHTML(unaToma(), { editando: true }), /draggable="true"/);
   assert.doesNotMatch(tarjetaHTML(unaToma()), /draggable="true"/);
 });
+
+test('un proyecto en pausa lo dice en el tablero', () => {
+  const estado = normalizarEstado({
+    proyectos: [{ id: 'p1', nombre: 'Munich', pausado: true }],
+    tomas: [{ id: 't1', proyecto: 'p1', queHacer: 'a', diaActual: HOY }]
+  });
+  const html = tableroHTML(estado, HOY);
+  assert.match(html, /EN PAUSA/);
+  assert.match(html, /class="col [^"]*pausado/);
+});
+
+test('cada proyecto trae su botón de pausar, oculto', () => {
+  const html = tableroHTML(conProyectos(1), HOY);
+  assert.match(html, /class="oculto[^"]*"[^>]*data-accion="pausar"/);
+});
+
+test('el botón dice reanudar cuando ya está en pausa', () => {
+  const estado = normalizarEstado({
+    proyectos: [{ id: 'p1', nombre: 'Munich', pausado: true }],
+    tomas: [{ id: 't1', proyecto: 'p1', queHacer: 'a', diaActual: HOY }]
+  });
+  assert.match(tableroHTML(estado, HOY), /data-accion="pausar">Reanudar</);
+});

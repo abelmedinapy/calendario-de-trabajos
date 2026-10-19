@@ -63,5 +63,5 @@ test('deFila devuelve booleanos de verdad, no ceros y unos', () => {
 test('aFila no inventa columnas que la tabla no tiene', () => {
   const f = aFila('proyectos', unProyecto());
   assert.deepEqual(Object.keys(f).sort(),
-    ['actualizado', 'archivado', 'borrado', 'color', 'etiqueta', 'id', 'nombre']);
+    ['actualizado', 'archivado', 'borrado', 'color', 'etiqueta', 'id', 'nombre', 'pausado']);
 });

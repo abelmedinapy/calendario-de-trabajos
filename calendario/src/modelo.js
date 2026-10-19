@@ -15,6 +15,7 @@ function proyecto(crudo) {
     etiqueta: texto(crudo.etiqueta),
     color: COLORES.includes(crudo.color) ? crudo.color : 'acid',
     archivado: siNo(crudo.archivado),
+    pausado: siNo(crudo.pausado),
     borrado: siNo(crudo.borrado),
     actualizado: texto(crudo.actualizado)
   };
@@ -72,7 +73,9 @@ function porOrden(a, b) {
 // ensucia el tablero, pero si no se ve nunca se le puede agregar la primera.
 export function agruparPorProyecto(estado, fecha, { incluirVacios = false } = {}) {
   const grupos = [];
-  for (const p of estado.proyectos) {
+  // Lo pausado va al final: sigue a la vista, pero no es lo del día.
+  const enOrden = [...estado.proyectos].sort((a, b) => Number(a.pausado) - Number(b.pausado));
+  for (const p of enOrden) {
     if (p.archivado || p.borrado) continue;
     if (!p.nombre && !incluirVacios) continue;
     const suyas = estado.tomas
@@ -91,7 +94,7 @@ export function agruparPorProyecto(estado, fecha, { incluirVacios = false } = {}
 // Los contadores salen de lo que el tablero muestra, no de las filas sueltas:
 // una toma de un proyecto borrado no está a la vista y no se cuenta.
 export function contadores(estado, fecha) {
-  const grupos = agruparPorProyecto(estado, fecha);
+  const grupos = agruparPorProyecto(estado, fecha).filter((g) => !g.proyecto.pausado);
   const delDia = grupos.flatMap((g) => [...g.hechas, ...g.pendientes]);
   return {
     proyectos: grupos.length,

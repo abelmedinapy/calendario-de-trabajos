@@ -7,6 +7,7 @@ CREATE TABLE IF NOT EXISTS proyectos (
   etiqueta    TEXT NOT NULL DEFAULT '',
   color       TEXT NOT NULL DEFAULT 'acid',
   archivado   INTEGER NOT NULL DEFAULT 0,
+  pausado     INTEGER NOT NULL DEFAULT 0,
   borrado     INTEGER NOT NULL DEFAULT 0,
   actualizado TEXT NOT NULL DEFAULT ''
 );

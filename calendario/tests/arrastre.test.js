@@ -93,3 +93,21 @@ test('diasConTrabajo no cuenta lo borrado', () => {
   const estado = conTomas({ diaOrigen: '2026-10-15', diaActual: '2026-10-15', borrado: true });
   assert.deepEqual([...diasConTrabajo(estado, ['2026-10-15'])], []);
 });
+
+test('lo de un proyecto en pausa no se arrastra: para eso se pausa', () => {
+  const estado = normalizarEstado({
+    proyectos: [{ id: 'p1', nombre: 'Munich', pausado: true }],
+    tomas: [{ id: 't1', proyecto: 'p1', queHacer: 'a', diaOrigen: '2026-10-17', diaActual: '2026-10-17' }]
+  });
+  const { estado: despues, movidas } = arrastrar(estado, HOY);
+  assert.deepEqual(movidas, []);
+  assert.equal(despues.tomas[0].diaActual, '2026-10-17');
+});
+
+test('al despausar, lo pendiente vuelve a arrastrarse', () => {
+  const estado = normalizarEstado({
+    proyectos: [{ id: 'p1', nombre: 'Munich', pausado: false }],
+    tomas: [{ id: 't1', proyecto: 'p1', queHacer: 'a', diaOrigen: '2026-10-17', diaActual: '2026-10-17' }]
+  });
+  assert.deepEqual(arrastrar(estado, HOY).movidas, ['t1']);
+});

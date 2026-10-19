@@ -8,7 +8,7 @@ import {
   agregarBorradorDeToma, agregarBorradorDeProyecto, quitarBorradorVacio,
   ponerGrafico, ponerValorDeGrafico, moverTrabajo,
   subirTrabajo, bajarTrabajo, soltarAntesDe, queHaceElEnter, limpiarBorradores,
-  codigoNuevo
+  codigoNuevo, pausarProyecto
 } from '../src/editar.js';
 
 const DIA = '2026-10-18';
@@ -521,4 +521,11 @@ test('dos trabajos del mismo proyecto no comparten código', () => {
   const uno = agregarBorradorDeToma(conProyecto(), { proyecto: 'p1', dia: DIA }).estado;
   const dos = agregarBorradorDeToma(uno, { proyecto: 'p1', dia: DIA }).estado;
   assert.notEqual(dos.tomas[0].codigo, dos.tomas[1].codigo);
+});
+
+test('pausar y reanudar un proyecto', () => {
+  const { estado, cambios } = pausarProyecto(conProyecto(), 'p1');
+  assert.equal(estado.proyectos[0].pausado, true);
+  assert.equal(cambios[0].fila.pausado, true);
+  assert.equal(pausarProyecto(estado, 'p1').estado.proyectos[0].pausado, false);
 });

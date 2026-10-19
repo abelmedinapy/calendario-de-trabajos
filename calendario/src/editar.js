@@ -26,6 +26,7 @@ export function agregarProyecto(estado, { nombre, etiqueta = '', color } = {}) {
     etiqueta: etiqueta.trim(),
     color: COLORES.includes(color) ? color : COLORES[estado.proyectos.length % COLORES.length],
     archivado: false,
+    pausado: false,
     borrado: false,
     actualizado: ahora()
   };
@@ -142,6 +143,7 @@ export function agregarBorradorDeProyecto(estado) {
     etiqueta: '',
     color: COLORES[estado.proyectos.filter((p) => !p.borrado).length % COLORES.length],
     archivado: false,
+    pausado: false,
     borrado: false,
     actualizado: ahora()
   };
@@ -168,6 +170,18 @@ export function quitarBorradorVacio(estado, id, tabla = 'tomas') {
   const t = estado.tomas.find((x) => x.id === id);
   if (!t || t.queHacer) return nada(estado);
   return { estado: { ...estado, tomas: estado.tomas.filter((x) => x.id !== id) }, cambios: [] };
+}
+
+// En pausa: el proyecto sigue a la vista pero no es parte del día. No cuenta
+// en los contadores y lo suyo no se arrastra hacia hoy.
+export function pausarProyecto(estado, proyectoId) {
+  const viejo = estado.proyectos.find((p) => p.id === proyectoId);
+  if (!viejo) return nada(estado);
+  const nuevo = { ...viejo, pausado: !viejo.pausado, actualizado: ahora() };
+  return {
+    estado: { ...estado, proyectos: estado.proyectos.map((p) => (p.id === proyectoId ? nuevo : p)) },
+    cambios: [cambioDe('proyectos', nuevo)]
+  };
 }
 
 export function ponerTextoDeProyecto(estado, proyectoId, campo, texto) {

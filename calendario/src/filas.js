@@ -4,7 +4,8 @@
 const COLUMNAS = {
   proyectos: {
     id: 'id', nombre: 'nombre', etiqueta: 'etiqueta', color: 'color',
-    archivado: 'archivado', borrado: 'borrado', actualizado: 'actualizado'
+    archivado: 'archivado', pausado: 'pausado', borrado: 'borrado',
+    actualizado: 'actualizado'
   },
   tomas: {
     id: 'id', proyecto: 'proyecto', codigo: 'codigo', queHacer: 'que_hacer',
@@ -19,7 +20,7 @@ const COLUMNAS = {
   }
 };
 
-const BOOLEANOS = new Set(['archivado', 'hecha', 'enCurso', 'borrado']);
+const BOOLEANOS = new Set(['archivado', 'pausado', 'hecha', 'enCurso', 'borrado']);
 const JSONS = new Set(['graficoValores']);
 
 export const columnasDe = (tabla) => Object.values(COLUMNAS[tabla]);

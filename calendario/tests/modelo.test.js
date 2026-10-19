@@ -150,3 +150,33 @@ test('lo borrado no se ve ni se cuenta', () => {
   assert.deepEqual(agruparPorProyecto(e, DIA)[0].pendientes.map((t) => t.id), ['t1']);
   assert.deepEqual(contadores(e, DIA), { proyectos: 1, tomas: 1, listas: 0 });
 });
+
+test('un proyecto en pausa se sigue viendo, pero marcado y al final', () => {
+  const e = normalizarEstado({
+    proyectos: [
+      { id: 'p1', nombre: 'Munich', pausado: true },
+      { id: 'p2', nombre: 'Fortaleza' }
+    ],
+    tomas: [
+      { id: 't1', proyecto: 'p1', queHacer: 'a', diaActual: DIA },
+      { id: 't2', proyecto: 'p2', queHacer: 'b', diaActual: DIA }
+    ]
+  });
+  const grupos = agruparPorProyecto(e, DIA);
+  assert.deepEqual(grupos.map((g) => g.proyecto.id), ['p2', 'p1']);
+  assert.equal(grupos[1].proyecto.pausado, true);
+});
+
+test('lo que está en pausa no entra en los contadores del día', () => {
+  const e = normalizarEstado({
+    proyectos: [
+      { id: 'p1', nombre: 'Munich', pausado: true },
+      { id: 'p2', nombre: 'Fortaleza' }
+    ],
+    tomas: [
+      { id: 't1', proyecto: 'p1', queHacer: 'a', diaActual: DIA },
+      { id: 't2', proyecto: 'p2', queHacer: 'b', diaActual: DIA, hecha: true }
+    ]
+  });
+  assert.deepEqual(contadores(e, DIA), { proyectos: 1, tomas: 1, listas: 1 });
+});

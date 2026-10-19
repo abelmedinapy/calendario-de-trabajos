@@ -4,8 +4,10 @@
 export function arrastrar(estado, hoy, ahora = new Date()) {
   const sello = ahora.toISOString();
   const movidas = [];
+  // Un proyecto en pausa no empuja nada hacia hoy: para eso se pausa.
+  const enPausa = new Set(estado.proyectos.filter((p) => p.pausado).map((p) => p.id));
   const tomas = estado.tomas.map((t) => {
-    if (t.borrado || t.hecha || t.diaActual >= hoy) return t;
+    if (t.borrado || t.hecha || t.diaActual >= hoy || enPausa.has(t.proyecto)) return t;
     movidas.push(t.id);
     return { ...t, diaActual: hoy, actualizado: sello };
   });

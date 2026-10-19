@@ -118,10 +118,13 @@ function columnaHTML(grupo, editando, desdeCara = 0, hoy = hoyReal()) {
     ? `<span${escribible('etiqueta', 'VFX, Spot…')}>${escapar(grupo.proyecto.etiqueta)}</span>` : '';
   const chips = grupo.hechas.length
     ? `<div class="chips">${grupo.hechas.map((t, i) => chipHTML(t, desdeCara + i)).join('')}</div>` : '';
-  return `<div class="col ${escapar(grupo.proyecto.color)}" data-proyecto="${escapar(grupo.proyecto.id)}">
+  const pausa = grupo.proyecto.pausado
+    ? '<span class="pausa">EN PAUSA</span>' : '';
+  return `<div class="col ${escapar(grupo.proyecto.color)}${grupo.proyecto.pausado ? ' pausado' : ''}" data-proyecto="${escapar(grupo.proyecto.id)}">
     <span class="node"></span>
     <div class="elbow"></div>
-    <div class="pname"><h2${escribible('nombre', '¿Qué proyecto?')}>${escapar(grupo.proyecto.nombre)}</h2>${etiqueta}
+    <div class="pname"><h2${escribible('nombre', '¿Qué proyecto?')}>${escapar(grupo.proyecto.nombre)}</h2>${etiqueta}${pausa}
+      <button class="oculto" data-accion="pausar">${grupo.proyecto.pausado ? 'Reanudar' : 'Pausar'}</button>
       <button class="oculto borrar" data-accion="borrar-proyecto" aria-label="Borrar el proyecto">Borrar</button></div>
     ${chips}
     ${grupo.pendientes.map((t) => tarjetaHTML(t, { editando, hoy })).join('')}
