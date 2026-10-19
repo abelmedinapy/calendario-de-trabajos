@@ -542,6 +542,12 @@ export function conectar(raiz, acciones) {
   const coordenadaY = (evento) =>
     evento.clientY ?? evento.touches?.[0]?.clientY ?? evento.changedTouches?.[0]?.clientY;
 
+  // Cuánto hay que mover antes de considerarlo arrastre. Abajo de esto es un
+  // clic, y el clic tiene que llegar: si se bloquea el comportamiento por
+  // defecto al apretar, el navegador no dispara el click y la tarjeta deja de
+  // responder a un toque simple.
+  const UMBRAL = 5;
+
   // Se agarra de cualquier parte de la tarjeta, no de un tirador de siete
   // píxeles que no se encuentra. Quedan afuera los campos de texto y los
   // botones, que tienen su propio trabajo.
@@ -551,21 +557,25 @@ export function conectar(raiz, acciones) {
     if (destinoDelDedo.closest?.('[data-campo], button, [data-accion]')) return;
     const tarjeta = destinoDelDedo.closest?.('[data-toma]');
     if (!tarjeta || !tarjeta.classList.contains('card')) return;
-    evento.preventDefault();
-    agarrado = { id: tarjeta.dataset.toma, tarjeta, destino: null, movio: false };
+    // Sin preventDefault acá: todavía no se sabe si es un clic o un arrastre.
+    agarrado = {
+      id: tarjeta.dataset.toma, tarjeta, destino: null, movio: false,
+      desdeY: coordenadaY(evento)
+    };
   }
 
   function moverAgarre(evento) {
     if (!agarrado) return;
     const y = coordenadaY(evento);
     if (y == null) return;
-    evento.preventDefault();
-    // Recién cuando se movió de verdad se marca como arrastre: así un clic
-    // suelto sobre la tarjeta sigue siendo un clic.
     if (!agarrado.movio) {
+      if (Math.abs(y - agarrado.desdeY) < UMBRAL) return;
       agarrado.movio = true;
       agarrado.tarjeta.classList.add('arrastrando');
     }
+    // Recién desde acá se bloquea lo de siempre: ya es un arrastre, y hay que
+    // frenar la selección de texto y el scroll del dedo.
+    evento.preventDefault();
     const hermanas = [...agarrado.tarjeta.closest('[data-proyecto]').querySelectorAll('.card')];
     const encima = hermanas.find((otra) => {
       if (otra === agarrado.tarjeta) return false;
@@ -580,12 +590,12 @@ export function conectar(raiz, acciones) {
 
   function terminarAgarre() {
     if (!agarrado) return;
-    const { id, destino } = agarrado;
+    const { id, destino, movio } = agarrado;
     agarrado = null;
     for (const otra of raiz.querySelectorAll('.arrastrando, .destino')) {
       otra.classList.remove('arrastrando', 'destino');
     }
-    if (destino) acciones.soltar?.({ toma: id, destino: destino.dataset.toma });
+    if (movio && destino) acciones.soltar?.({ toma: id, destino: destino.dataset.toma });
   }
 
   for (const [donde, nombre, mano] of [
