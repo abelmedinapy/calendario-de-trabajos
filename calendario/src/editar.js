@@ -529,59 +529,66 @@ export function conectar(raiz, acciones) {
     });
   });
 
-  // Arrastrar con eventos de puntero, no con el arrastre de HTML: ese no anda
-  // en Safari sobre elementos cualquiera y directamente no existe en táctil.
-  // Con punteros funciona igual en la compu y en el celular.
+  // Arrastrar el trabajo para cambiarlo de lugar.
+  //
+  // Tres intentos hicieron falta. El arrastre de HTML (draggable) no funciona
+  // en Safari sobre un span cualquiera y no existe en táctil. La captura de
+  // puntero tampoco resultó confiable. Esto es lo más llano que hay: se
+  // escucha el apretar en el agarre, y el mover y el soltar en el documento
+  // entero, aceptando tanto eventos de puntero como de mouse y de dedo. Si el
+  // navegador manda los dos, el segundo no hace nada porque ya está agarrado.
   let agarrado = null;
 
-  const tarjetasHermanas = (tarjeta) =>
-    [...tarjeta.closest('[data-proyecto]').querySelectorAll('.card')];
+  const coordenadaY = (evento) =>
+    evento.clientY ?? evento.touches?.[0]?.clientY ?? evento.changedTouches?.[0]?.clientY;
 
-  // Sobre qué tarjeta está el dedo o el mouse, por posición y no por el
-  // elemento de abajo: mientras se arrastra, abajo está la tarjeta agarrada.
-  function tarjetaBajo(y, tarjeta) {
-    return tarjetasHermanas(tarjeta).find((otra) => {
-      if (otra === tarjeta) return false;
-      const caja = otra.getBoundingClientRect();
-      return y >= caja.top && y <= caja.bottom;
-    });
-  }
-
-  function limpiarMarcas() {
-    for (const otra of raiz.querySelectorAll('.arrastrando, .destino')) {
-      otra.classList.remove('arrastrando', 'destino');
-    }
-  }
-
-  raiz.addEventListener('pointerdown', (evento) => {
+  function empezarAgarre(evento) {
+    if (agarrado) return;
     const agarre = evento.target.closest?.('.agarre');
     if (!agarre) return;
     const tarjeta = agarre.closest('[data-toma]');
     if (!tarjeta) return;
     evento.preventDefault();
-    agarrado = { tarjeta, id: tarjeta.dataset.toma, destino: null };
+    agarrado = { id: tarjeta.dataset.toma, tarjeta, destino: null };
     tarjeta.classList.add('arrastrando');
-    agarre.setPointerCapture?.(evento.pointerId);
-  });
+  }
 
-  raiz.addEventListener('pointermove', (evento) => {
+  function moverAgarre(evento) {
     if (!agarrado) return;
+    const y = coordenadaY(evento);
+    if (y == null) return;
     evento.preventDefault();
-    const encima = tarjetaBajo(evento.clientY, agarrado.tarjeta);
+    const hermanas = [...agarrado.tarjeta.closest('[data-proyecto]').querySelectorAll('.card')];
+    const encima = hermanas.find((otra) => {
+      if (otra === agarrado.tarjeta) return false;
+      const caja = otra.getBoundingClientRect();
+      return y >= caja.top && y <= caja.bottom;
+    });
     if (encima === agarrado.destino) return;
     for (const otra of raiz.querySelectorAll('.destino')) otra.classList.remove('destino');
     agarrado.destino = encima || null;
     if (encima) encima.classList.add('destino');
-  });
+  }
 
-  function soltar() {
+  function terminarAgarre() {
     if (!agarrado) return;
     const { id, destino } = agarrado;
     agarrado = null;
-    limpiarMarcas();
+    for (const otra of raiz.querySelectorAll('.arrastrando, .destino')) {
+      otra.classList.remove('arrastrando', 'destino');
+    }
     if (destino) acciones.soltar?.({ toma: id, destino: destino.dataset.toma });
   }
 
-  raiz.addEventListener('pointerup', soltar);
-  raiz.addEventListener('pointercancel', () => { agarrado = null; limpiarMarcas(); });
+  for (const [donde, nombre, mano] of [
+    [raiz, 'pointerdown', empezarAgarre], [raiz, 'mousedown', empezarAgarre],
+    [raiz, 'touchstart', empezarAgarre],
+    [document, 'pointermove', moverAgarre], [document, 'mousemove', moverAgarre],
+    [document, 'touchmove', moverAgarre],
+    [document, 'pointerup', terminarAgarre], [document, 'mouseup', terminarAgarre],
+    [document, 'touchend', terminarAgarre], [document, 'pointercancel', terminarAgarre],
+    [document, 'touchcancel', terminarAgarre]
+  ]) {
+    donde.addEventListener(nombre, mano, { passive: false });
+  }
 }

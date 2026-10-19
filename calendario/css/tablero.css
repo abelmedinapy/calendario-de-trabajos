@@ -233,8 +233,9 @@ body{
 .agarre{
   position:absolute;left:4px;top:50%;transform:translateY(-50%);
   cursor:grab;color:var(--dim);font-size:15px;line-height:1;
-  padding:10px 6px;opacity:0;transition:opacity .12s ease;
+  padding:12px 7px;opacity:0;transition:opacity .12s ease;
   user-select:none;-webkit-user-select:none;touch-action:none;
+  -webkit-user-drag:none;
 }
 .card:hover .agarre,.col:focus-within .agarre,#tablero.editando .agarre{opacity:.8}
 .agarre:hover{color:var(--fg);opacity:1}
@@ -252,9 +253,13 @@ body{
 .col.pausado h2{color:var(--dim)}
 .col.pausado .node{background:var(--warn)}
 .col.pausado::before{background:var(--warn);opacity:.45}
+/* La píldora de pausa es el aviso del tablero: va rellena, no delineada, para
+   que se lea de un vistazo y en una captura. */
 .pausa{
-  font-size:10.5px;font-weight:700;letter-spacing:.1em;color:var(--warn);
-  border:1px solid var(--warn);border-radius:999px;padding:3px 9px;white-space:nowrap;
+  font-size:11px;font-weight:700;letter-spacing:.1em;
+  color:#1B1200;background:var(--warn);border-radius:999px;
+  padding:4px 11px;white-space:nowrap;
+  box-shadow:0 0 0 3px color-mix(in oklab,var(--warn) 22%,transparent);
 }
 
 /* ---------- tarjetas ---------- */
