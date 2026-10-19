@@ -98,7 +98,11 @@ export function scrubberHTML(estado, fecha) {
 }
 
 export function tableroHTML(estado, fecha, { editando = false } = {}) {
-  const grupos = agruparPorProyecto(estado, fecha, { incluirVacios: editando });
+  // Un proyecto sin tomas no ensucia la captura de un día ya cargado, pero si
+  // el día está vacío tiene que verse: si no, cargás un proyecto, el tablero
+  // sigue diciendo "no hay nada anotado" y lo cargás otra vez.
+  const hayTomas = estado.tomas.some((t) => !t.borrado && t.diaActual === fecha);
+  const grupos = agruparPorProyecto(estado, fecha, { incluirVacios: editando || !hayTomas });
   const n = contadores(estado, fecha);
   const delDia = estado.dias.find((d) => d.fecha === fecha);
 

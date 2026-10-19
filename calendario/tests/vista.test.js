@@ -126,7 +126,10 @@ test('hay un botón para mostrar los controles', () => {
 });
 
 test('en modo editar se ve el proyecto que todavía no tiene tomas', () => {
-  const estado = normalizarEstado({ proyectos: [{ id: 'p1', nombre: 'Fortaleza' }] });
+  const estado = normalizarEstado({
+    proyectos: [{ id: 'p1', nombre: 'Fortaleza' }, { id: 'p2', nombre: 'Kromatik' }],
+    tomas: [{ id: 't1', proyecto: 'p2', queHacer: 'grade', diaActual: HOY }]
+  });
   assert.doesNotMatch(tableroHTML(estado, HOY), /Fortaleza/);
   assert.match(tableroHTML(estado, HOY, { editando: true }), /Fortaleza/);
 });
@@ -168,4 +171,28 @@ test('el chip de una toma hecha trae su botón de borrar, oculto', () => {
     tomas: [{ id: 't1', proyecto: 'p1', queHacer: 'track', diaActual: HOY, hecha: true }]
   });
   assert.match(tableroHTML(estado, HOY), /class="oculto[^"]*"[^>]*data-accion="borrar-toma"/);
+});
+
+test('si el día no tiene ninguna toma, los proyectos vacíos igual se ven', () => {
+  // Si no, cargás un proyecto y el tablero sigue diciendo "no hay nada anotado":
+  // parece que no se guardó y lo cargás de nuevo.
+  const estado = normalizarEstado({ proyectos: [{ id: 'p1', nombre: 'Fortaleza', etiqueta: 'VFX' }] });
+  const html = tableroHTML(estado, HOY);
+  assert.match(html, /Fortaleza/);
+  assert.match(html, /data-accion="nueva-toma"/);
+  assert.doesNotMatch(html, /Todavía no hay nada anotado/);
+});
+
+test('con el día ya cargado, un proyecto vacío no ensucia la captura', () => {
+  const estado = normalizarEstado({
+    proyectos: [{ id: 'p1', nombre: 'Fortaleza' }, { id: 'p2', nombre: 'Vacío' }],
+    tomas: [{ id: 't1', proyecto: 'p1', queHacer: 'roto', diaActual: HOY }]
+  });
+  const html = tableroHTML(estado, HOY);
+  assert.match(html, /Fortaleza/);
+  assert.doesNotMatch(html, /Vacío/);
+});
+
+test('sin proyectos ni tomas sigue invitando a anotar', () => {
+  assert.match(tableroHTML(VACIO, HOY), /Todavía no hay nada anotado/);
 });

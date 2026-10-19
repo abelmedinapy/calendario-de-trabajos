@@ -175,6 +175,9 @@ function arrancar() {
       if (nombre === null) return;
       const etiqueta = prompt('¿Qué es? (VFX, Spot, Propio…)') ?? '';
       const { estado: nuevo, cambios } = agregarProyecto(estado, { nombre, etiqueta });
+      // Recién creado no tiene tomas: encendemos el modo editar para que se vea
+      // y tenga al lado el botón de agregarle la primera.
+      if (cambios.length) editando = true;
       guardar(nuevo, cambios);
     },
 
