@@ -78,9 +78,12 @@ export function tarjetaHTML(toma, { editando = false, hoy = hoyReal() } = {}) {
     ? `<span class="late">${atraso} ${atraso === 1 ? 'día' : 'días'}</span>`
     : '';
 
-  const escribible = (campo, vacio) => editando
-    ? ` contenteditable="plaintext-only" data-campo="${campo}" data-vacio="${escapar(vacio)}"`
-    : '';
+  // Lo que ya tiene texto se puede escribir siempre: se hace clic en la
+  // cápsula que uno quiere y se escribe, sin prender ningún modo. Los campos
+  // vacíos con su texto de ayuda sí esperan al modo editar, porque si no
+  // aparecerían en todas las tarjetas y ensuciarían la captura.
+  const escribible = (campo, vacio) =>
+    ` contenteditable="plaintext-only" data-campo="${campo}" data-vacio="${escapar(vacio)}"`;
 
   const codigo = (toma.codigo || editando)
     ? `<u${escribible('codigo', 'código')}>${escapar(toma.codigo)}</u>`
@@ -116,9 +119,8 @@ function chipHTML(toma, cara = 0) {
 }
 
 function columnaHTML(grupo, editando, desdeCara = 0, hoy = hoyReal()) {
-  const escribible = (campo, vacio) => editando
-    ? ` contenteditable="plaintext-only" data-campo="${campo}" data-vacio="${escapar(vacio)}"`
-    : '';
+  const escribible = (campo, vacio) =>
+    ` contenteditable="plaintext-only" data-campo="${campo}" data-vacio="${escapar(vacio)}"`;
   const etiqueta = (grupo.proyecto.etiqueta || editando)
     ? `<span${escribible('etiqueta', 'VFX, Spot…')}>${escapar(grupo.proyecto.etiqueta)}</span>` : '';
   const chips = grupo.hechas.length

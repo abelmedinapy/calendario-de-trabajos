@@ -542,15 +542,17 @@ export function conectar(raiz, acciones) {
   const coordenadaY = (evento) =>
     evento.clientY ?? evento.touches?.[0]?.clientY ?? evento.changedTouches?.[0]?.clientY;
 
+  // Se agarra de cualquier parte de la tarjeta, no de un tirador de siete
+  // píxeles que no se encuentra. Quedan afuera los campos de texto y los
+  // botones, que tienen su propio trabajo.
   function empezarAgarre(evento) {
     if (agarrado) return;
-    const agarre = evento.target.closest?.('.agarre');
-    if (!agarre) return;
-    const tarjeta = agarre.closest('[data-toma]');
-    if (!tarjeta) return;
+    const destinoDelDedo = evento.target;
+    if (destinoDelDedo.closest?.('[data-campo], button, [data-accion]')) return;
+    const tarjeta = destinoDelDedo.closest?.('[data-toma]');
+    if (!tarjeta || !tarjeta.classList.contains('card')) return;
     evento.preventDefault();
-    agarrado = { id: tarjeta.dataset.toma, tarjeta, destino: null };
-    tarjeta.classList.add('arrastrando');
+    agarrado = { id: tarjeta.dataset.toma, tarjeta, destino: null, movio: false };
   }
 
   function moverAgarre(evento) {
@@ -558,6 +560,12 @@ export function conectar(raiz, acciones) {
     const y = coordenadaY(evento);
     if (y == null) return;
     evento.preventDefault();
+    // Recién cuando se movió de verdad se marca como arrastre: así un clic
+    // suelto sobre la tarjeta sigue siendo un clic.
+    if (!agarrado.movio) {
+      agarrado.movio = true;
+      agarrado.tarjeta.classList.add('arrastrando');
+    }
     const hermanas = [...agarrado.tarjeta.closest('[data-proyecto]').querySelectorAll('.card')];
     const encima = hermanas.find((otra) => {
       if (otra === agarrado.tarjeta) return false;

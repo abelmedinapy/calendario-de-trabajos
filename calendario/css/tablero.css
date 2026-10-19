@@ -77,8 +77,11 @@ body{
 .oculto.suma{margin:4px 0 0 8px}
 .oculto.nuevo{margin-top:6px}
 #tablero.editando .oculto,
-.col:hover .oculto,
-.col:focus-within .oculto,
+.card:hover .oculto,
+.card:focus-within .oculto,
+.pname:hover .oculto,
+.pname:focus-within .oculto,
+.col > .oculto:hover,
 .oculto:focus-visible{opacity:1;pointer-events:auto}
 .oculto:hover{color:var(--fg);border-color:var(--dim)}
 
@@ -237,7 +240,12 @@ body{
   user-select:none;-webkit-user-select:none;touch-action:none;
   -webkit-user-drag:none;
 }
-.card:hover .agarre,.col:focus-within .agarre,#tablero.editando .agarre{opacity:.8}
+.card:hover .agarre,.col:focus-within .agarre,#tablero.editando .agarre,.card:hover .agarre{opacity:.8}
+/* La cápsula se agarra de cualquier lado menos de su texto y sus botones. */
+.card{cursor:grab}
+.card:active{cursor:grabbing}
+.card [data-campo]{cursor:text}
+.card button{cursor:pointer}
 .agarre:hover{color:var(--fg);opacity:1}
 .agarre:active{cursor:grabbing}
 .card{position:relative}
@@ -250,16 +258,20 @@ body{
    igual, y pasar el mouse por encima no puede hacer desaparecer el aviso. */
 .col.pausado .card,.col.pausado .chips{opacity:.45}
 .col.pausado .card:hover{opacity:1}
-.col.pausado h2{color:var(--dim)}
+.col.pausado h2{color:var(--warn)}
+.col.pausado{
+  background:color-mix(in oklab,var(--warn) 7%,transparent);
+  border-radius:20px;padding-right:10px;
+}
 .col.pausado .node{background:var(--warn)}
 .col.pausado::before{background:var(--warn);opacity:.45}
 /* La píldora de pausa es el aviso del tablero: va rellena, no delineada, para
    que se lea de un vistazo y en una captura. */
 .pausa{
-  font-size:11px;font-weight:700;letter-spacing:.1em;
+  font-size:12.5px;font-weight:700;letter-spacing:.12em;
   color:#1B1200;background:var(--warn);border-radius:999px;
-  padding:4px 11px;white-space:nowrap;
-  box-shadow:0 0 0 3px color-mix(in oklab,var(--warn) 22%,transparent);
+  padding:5px 14px;white-space:nowrap;
+  box-shadow:0 0 0 4px color-mix(in oklab,var(--warn) 25%,transparent);
 }
 
 /* ---------- tarjetas ---------- */

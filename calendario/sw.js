@@ -4,7 +4,7 @@
 // versión y vista.js de otra, y la app hace cosas a medias.
 import { listaDeArchivos } from './src/archivos.js';
 
-const VERSION = 'calendario-2026-10-19T02-15-14';
+const VERSION = 'calendario-2026-10-19T02-18-48';
 
 // Los archivos de la app se piden a la red y se guardan de paso; si no hay red,
 // salen del cache. La API nunca se guarda.

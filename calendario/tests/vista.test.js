@@ -204,8 +204,19 @@ test('en modo editar se puede escribir encima del texto de la tarjeta', () => {
   }
 });
 
-test('en reposo la tarjeta no es editable: la captura no se toca sin querer', () => {
-  assert.doesNotMatch(tarjetaHTML(unaToma({ codigo: 'T22', detalle: 'x' })), /contenteditable/);
+test('se puede escribir en una cápsula sin prender ningún modo', () => {
+  // Se hace clic en la que uno quiere y se escribe. Lo que mantiene limpia la
+  // captura no es que no se pueda escribir, sino que no haya nada dibujado de
+  // más: ni botones ni textos de ayuda.
+  const html = tarjetaHTML(unaToma({ codigo: 'T22', detalle: 'x' }));
+  assert.match(html, /contenteditable="plaintext-only"[^>]*data-campo="queHacer"/);
+  assert.match(html, /data-campo="detalle"/);
+});
+
+test('en reposo no aparecen los campos vacíos con su texto de ayuda', () => {
+  const html = tarjetaHTML(unaToma());
+  assert.doesNotMatch(html, /data-campo="codigo"/);
+  assert.doesNotMatch(html, /data-campo="detalle"/);
 });
 
 test('en modo editar aparecen el código y el detalle vacíos para poder ponerlos', () => {
@@ -215,13 +226,14 @@ test('en modo editar aparecen el código y el detalle vacíos para poder ponerlo
   assert.match(html, /data-vacio="/);
 });
 
-test('el tablero pasa el modo editar a sus tarjetas', () => {
+test('el modo editar es lo que saca los campos vacíos a la luz', () => {
   const estado = normalizarEstado({
     proyectos: [{ id: 'p1', nombre: 'Fortaleza' }],
     tomas: [{ id: 't1', proyecto: 'p1', queHacer: 'roto', diaActual: HOY }]
   });
-  assert.doesNotMatch(tableroHTML(estado, HOY), /data-campo="queHacer"/);
-  assert.match(tableroHTML(estado, HOY, { editando: true }), /data-campo="queHacer"/);
+  assert.match(tableroHTML(estado, HOY), /data-campo="queHacer"/);
+  assert.doesNotMatch(tableroHTML(estado, HOY), /data-campo="detalle"/);
+  assert.match(tableroHTML(estado, HOY, { editando: true }), /data-campo="detalle"/);
 });
 
 test('en la pantalla se dice trabajo, no toma', () => {
@@ -249,12 +261,12 @@ test('un proyecto recién agregado se dibuja con el nombre vacío', () => {
   assert.match(html, /data-proyecto="p1"/);
 });
 
-test('en reposo el nombre del proyecto no es editable', () => {
+test('el nombre del proyecto también se corrige con un clic', () => {
   const estado = normalizarEstado({
     proyectos: [{ id: 'p1', nombre: 'Fortaleza' }],
     tomas: [{ id: 't1', proyecto: 'p1', queHacer: 'roto', diaActual: HOY }]
   });
-  assert.doesNotMatch(tableroHTML(estado, HOY), /data-campo="nombre"/);
+  assert.match(tableroHTML(estado, HOY), /data-campo="nombre"/);
 });
 
 test('si el día abierto no es hoy, el título lo dice en vez de mentir', () => {
@@ -384,9 +396,8 @@ test('en modo editar la cadencia deja escribir los cuadros y las imágenes por s
   assert.match(html, /img\/s/);
 });
 
-test('en reposo los valores del gráfico no se pueden tocar', () => {
+test('los números del gráfico se corrigen escribiéndolos encima', () => {
   const html = tarjetaHTML(unaToma({ grafico: 'capas', graficoValores: { hechas: 2, total: 3 } }));
-  assert.doesNotMatch(html, /contenteditable/);
   assert.match(html, /2/);
   assert.match(html, /3/);
 });
