@@ -7,79 +7,67 @@ import { loQueDiceRender } from '../src/render-dice.js';
 const HOY = '2026-10-18';
 const VACIO = { proyectos: [], tomas: [], dias: [] };
 
-function arrastradas(cuantas, proyectos = ['p1']) {
+function conPendientes(cuantos, proyectos = ['p1']) {
   return normalizarEstado({
     proyectos: proyectos.map((id) => ({ id, nombre: id === 'p1' ? 'Fortaleza' : 'Kromatik' })),
-    tomas: Array.from({ length: cuantas }, (_, i) => ({
+    tomas: Array.from({ length: cuantos }, (_, i) => ({
       id: `t${i}`,
       proyecto: proyectos[i % proyectos.length],
       queHacer: 'algo',
-      diaOrigen: '2026-10-17',
+      diaOrigen: HOY,
       diaActual: HOY
     }))
   });
 }
 
 test('si el día tiene texto escrito a mano, gana ese', () => {
-  const estado = normalizarEstado({ ...arrastradas(3), dias: [{ fecha: HOY, renderDice: 'lo que sea' }] });
+  const estado = normalizarEstado({ ...conPendientes(3), dias: [{ fecha: HOY, renderDice: 'lo que sea' }] });
   assert.equal(loQueDiceRender(estado, HOY), 'lo que sea');
 });
 
-test('cuenta lo que quedó sin cerrar y nombra el proyecto cuando es uno solo', () => {
-  assert.equal(loQueDiceRender(arrastradas(3), HOY),
-    'Ayer quedaron 3 trabajos de Fortaleza.');
+test('cuenta lo que falta y nombra el proyecto cuando es uno solo', () => {
+  assert.equal(loQueDiceRender(conPendientes(13), HOY), '13 pendientes de Fortaleza.');
 });
 
 test('con varios proyectos no nombra ninguno', () => {
-  assert.equal(loQueDiceRender(arrastradas(5, ['p1', 'p2']), HOY),
-    'Ayer quedaron 5 trabajos.');
+  assert.equal(loQueDiceRender(conPendientes(5, ['p1', 'p2']), HOY), '5 pendientes.');
 });
 
-test('un solo trabajo va en singular', () => {
-  assert.equal(loQueDiceRender(arrastradas(1), HOY),
-    'Ayer quedó 1 trabajo de Fortaleza.');
+test('uno solo va en singular', () => {
+  assert.equal(loQueDiceRender(conPendientes(1), HOY), '1 pendiente de Fortaleza.');
 });
 
-test('si no quedó nada pendiente, saluda sin inventar', () => {
+test('no habla de ayer ni de lo que quedó sin hacer', () => {
+  const dicho = loQueDiceRender(conPendientes(3), HOY);
+  assert.doesNotMatch(dicho, /ayer|qued|sin cerrar/i);
+});
+
+test('con todo cerrado lo dice sin felicitar de más', () => {
   const estado = normalizarEstado({
     proyectos: [{ id: 'p1', nombre: 'Fortaleza' }],
-    tomas: [{ id: 't1', proyecto: 'p1', queHacer: 'x', diaOrigen: '2026-10-17', diaActual: '2026-10-17', hecha: true, diaHecha: '2026-10-17' }]
+    tomas: [{ id: 't1', proyecto: 'p1', queHacer: 'x', diaOrigen: HOY, diaActual: HOY, hecha: true, diaHecha: HOY }]
   });
-  assert.equal(loQueDiceRender(estado, HOY), 'Ayer cerraste todo. Arrancamos limpio.');
+  assert.equal(loQueDiceRender(estado, HOY), 'Está todo cerrado.');
 });
 
-test('el primer día de todos no habla de ayer', () => {
+test('sin nada anotado invita a anotar', () => {
   assert.equal(loQueDiceRender(VACIO, HOY), 'Anotá lo primero del día.');
 });
 
-test('un día con tomas nuevas pero sin pasado tampoco habla de ayer', () => {
+test('lo que está en pausa no se cuenta', () => {
   const estado = normalizarEstado({
-    proyectos: [{ id: 'p1', nombre: 'Fortaleza' }],
-    tomas: [{ id: 't1', proyecto: 'p1', queHacer: 'x', diaOrigen: HOY, diaActual: HOY }]
-  });
-  assert.equal(loQueDiceRender(estado, HOY), 'Anotá lo primero del día.');
-});
-
-test('los trabajos hechos no cuentan como arrastrados', () => {
-  const estado = normalizarEstado({
-    proyectos: [{ id: 'p1', nombre: 'Fortaleza' }],
+    proyectos: [{ id: 'p1', nombre: 'Fortaleza' }, { id: 'p2', nombre: 'Munich', pausado: true }],
     tomas: [
-      { id: 't1', proyecto: 'p1', queHacer: 'x', diaOrigen: '2026-10-17', diaActual: HOY, hecha: true, diaHecha: HOY },
-      { id: 't2', proyecto: 'p1', queHacer: 'y', diaOrigen: '2026-10-17', diaActual: HOY }
+      { id: 't1', proyecto: 'p1', queHacer: 'a', diaOrigen: HOY, diaActual: HOY },
+      { id: 't2', proyecto: 'p2', queHacer: 'b', diaOrigen: HOY, diaActual: HOY },
+      { id: 't3', proyecto: 'p2', queHacer: 'c', diaOrigen: HOY, diaActual: HOY }
     ]
   });
-  assert.equal(loQueDiceRender(estado, HOY), 'Ayer quedó 1 trabajo de Fortaleza.');
+  assert.equal(loQueDiceRender(estado, HOY), '1 pendiente de Fortaleza.');
 });
 
 test('nunca dice una hora', () => {
-  for (const estado of [VACIO, arrastradas(1), arrastradas(5, ['p1', 'p2'])]) {
+  for (const estado of [VACIO, conPendientes(1), conPendientes(5, ['p1', 'p2'])]) {
     assert.doesNotMatch(loQueDiceRender(estado, HOY), /\d{1,2}[:.]\d{2}/);
   }
-});
-
-test('RENDER también habla de trabajos, no de tomas', () => {
-  assert.equal(loQueDiceRender(arrastradas(3), HOY),
-    'Ayer quedaron 3 trabajos de Fortaleza.');
-  assert.equal(loQueDiceRender(arrastradas(1), HOY),
-    'Ayer quedó 1 trabajo de Fortaleza.');
 });

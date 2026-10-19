@@ -1,26 +1,28 @@
-// La línea que dice RENDER arriba del tablero. Habla de lo que quedó de antes
-// y nunca de horas.
+// La línea que dice RENDER arriba del tablero. Cuenta lo que falta, no lo que
+// quedó sin hacer ayer: hablar de "lo que quedó" suena a reproche, y lo que
+// sirve a la mañana es saber cuánto hay por delante. Nunca dice horas.
 
 export function loQueDiceRender(estado, fecha) {
   const delDia = estado.dias.find((d) => d.fecha === fecha);
   if (delDia && delDia.renderDice) return delDia.renderDice;
 
-  const arrastradas = estado.tomas.filter(
-    (t) => !t.borrado && !t.hecha && t.diaActual === fecha && t.diaOrigen < fecha);
+  const enPausa = new Set(estado.proyectos.filter((p) => p.pausado).map((p) => p.id));
+  const delTablero = estado.tomas.filter(
+    (t) => !t.borrado && t.diaActual === fecha && !enPausa.has(t.proyecto));
+  const pendientes = delTablero.filter((t) => !t.hecha);
 
-  if (arrastradas.length === 0) {
-    const huboPasado =
-      estado.tomas.some((t) => !t.borrado && t.diaOrigen < fecha) ||
-      estado.dias.some((d) => !d.borrado && d.fecha < fecha);
-    return huboPasado ? 'Ayer cerraste todo. Arrancamos limpio.' : 'Anotá lo primero del día.';
+  if (pendientes.length === 0) {
+    return delTablero.length === 0
+      ? 'Anotá lo primero del día.'
+      : 'Está todo cerrado.';
   }
 
-  const proyectos = new Set(arrastradas.map((t) => t.proyecto));
+  const proyectos = new Set(pendientes.map((t) => t.proyecto));
   const deQuien = proyectos.size === 1
     ? ` de ${estado.proyectos.find((p) => p.id === [...proyectos][0])?.nombre ?? ''}`.trimEnd()
     : '';
 
-  return arrastradas.length === 1
-    ? `Ayer quedó 1 trabajo${deQuien}.`
-    : `Ayer quedaron ${arrastradas.length} trabajos${deQuien}.`;
+  return pendientes.length === 1
+    ? `1 pendiente${deQuien}.`
+    : `${pendientes.length} pendientes${deQuien}.`;
 }
