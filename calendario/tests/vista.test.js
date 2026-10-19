@@ -1,0 +1,107 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+
+import { normalizarEstado } from '../src/modelo.js';
+import { tableroHTML, tarjetaHTML, scrubberHTML } from '../src/vista.js';
+
+const HOY = '2026-10-18';
+const VACIO = normalizarEstado(null);
+
+const cuantos = (html, patron) => (html.match(patron) || []).length;
+
+function unaToma(extra = {}) {
+  return normalizarEstado({
+    tomas: [{ id: 't1', proyecto: 'p1', queHacer: 'Roto del brazo', diaOrigen: HOY, diaActual: HOY, ...extra }]
+  }).tomas[0];
+}
+
+function conProyectos(cantidad) {
+  return normalizarEstado({
+    proyectos: Array.from({ length: cantidad }, (_, i) => ({ id: `p${i}`, nombre: `Proyecto ${i}`, etiqueta: 'VFX' })),
+    tomas: Array.from({ length: cantidad }, (_, i) => ({
+      id: `t${i}`, proyecto: `p${i}`, queHacer: 'algo', diaOrigen: HOY, diaActual: HOY
+    })),
+    dias: [{ fecha: HOY, objetivo: 'Cerrar los VFX de Fortaleza y mandar el pase 2 de Kromatik.' }]
+  });
+}
+
+test('el tablero muestra el objetivo del día', () => {
+  assert.match(tableroHTML(conProyectos(3), HOY), /Cerrar los VFX de Fortaleza/);
+});
+
+test('hay un nodo del riel por proyecto con tomas', () => {
+  assert.equal(cuantos(tableroHTML(conProyectos(3), HOY), /class="node"/g), 3);
+});
+
+test('la toma en curso lleva la clase live y es una sola', () => {
+  const estado = normalizarEstado({
+    proyectos: [{ id: 'p1', nombre: 'Fortaleza' }],
+    tomas: [
+      { id: 't1', proyecto: 'p1', queHacer: 'a', diaActual: HOY, enCurso: true },
+      { id: 't2', proyecto: 'p1', queHacer: 'b', diaActual: HOY }
+    ]
+  });
+  assert.equal(cuantos(tableroHTML(estado, HOY), /card live/g), 1);
+});
+
+test('las tomas hechas salen como chip tachado, no como tarjeta', () => {
+  const estado = normalizarEstado({
+    proyectos: [{ id: 'p1', nombre: 'Fortaleza' }],
+    tomas: [{ id: 't1', proyecto: 'p1', queHacer: 'track de cámara', diaActual: HOY, hecha: true }]
+  });
+  const html = tableroHTML(estado, HOY);
+  assert.match(html, /class="chip"/);
+  assert.equal(cuantos(html, /class="card/g), 0);
+});
+
+test('la tarjeta dibuja el gráfico que pide la toma', () => {
+  assert.match(tarjetaHTML(unaToma({ grafico: 'capas', graficoValores: { hechas: 2, total: 3 } })), /class="layers"/);
+  assert.match(tarjetaHTML(unaToma({ grafico: 'curva', graficoValores: { ev: '+0.5' } })), /<svg/);
+  assert.match(tarjetaHTML(unaToma({ grafico: 'cadencia', graficoValores: { cada: 3, imgs: 8 } })), /class="strip"/);
+  const pelada = tarjetaHTML(unaToma());
+  assert.doesNotMatch(pelada, /class="layers"|<svg|class="strip"/);
+});
+
+test('una toma arrastrada dice cuántos días lleva', () => {
+  assert.match(tarjetaHTML(unaToma({ diaOrigen: '2026-10-15', diaActual: HOY })), /3 días/);
+});
+
+test('una toma de hoy no dice nada de días', () => {
+  assert.doesNotMatch(tarjetaHTML(unaToma()), /días/);
+});
+
+test('un día sin proyectos invita a anotar', () => {
+  const html = tableroHTML(VACIO, HOY);
+  assert.match(html, /Anotá lo primero del día/);
+  assert.doesNotMatch(html, /class="cols"|class="col /);
+});
+
+test('escapa el HTML que venga en los textos', () => {
+  const html = tarjetaHTML(unaToma({ queHacer: '<script>alert(1)</script>', detalle: 'a & b' }));
+  assert.doesNotMatch(html, /<script>/);
+  assert.match(html, /&lt;script&gt;/);
+  assert.match(html, /a &amp; b/);
+});
+
+test('un texto larguísimo no mete atributos de ancho en el HTML', () => {
+  const largo = 'a'.repeat(400);
+  const html = tarjetaHTML(unaToma({ detalle: largo }));
+  assert.match(html, new RegExp(largo));
+  assert.doesNotMatch(html, /style="/);
+});
+
+test('el scrubber marca el día abierto y los días con trabajo', () => {
+  const html = scrubberHTML(conProyectos(1), HOY);
+  assert.equal(cuantos(html, /class="day[^"]*now/g), 1);
+  assert.ok(cuantos(html, /has/g) >= 1);
+});
+
+test('con seis proyectos o más el tablero avisa, sin impedir nada', () => {
+  const html = tableroHTML(conProyectos(6), HOY);
+  assert.match(html, /seis proyectos en un día/);
+  assert.equal(cuantos(html, /class="node"/g), 6);
+});
+
+test('con cinco proyectos todavía no avisa', () => {
+  assert.doesNotMatch(tableroHTML(conProyectos(5), HOY), /seis proyectos en un día/);
+});
