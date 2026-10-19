@@ -168,7 +168,11 @@ export function ponerTextoDeToma(estado, tomaId, campo, texto) {
   const vieja = estado.tomas.find((t) => t.id === tomaId);
   if (!vieja) return nada(estado);
 
-  const limpio = (texto || '').trim();
+  // El detalle puede ser una lista de varios renglones, así que solo se le
+  // sacan los extremos: lo de adentro queda tal cual se escribió.
+  const limpio = (texto || '').replace(/^\s*\n|\s+$/g, '').trim() === ''
+    ? ''
+    : (texto || '').replace(/^\s+|\s+$/g, '');
   // queHacer es lo único que no puede quedar vacío: es el renglón de la tarjeta.
   if (campo === 'queHacer' && !limpio) return nada(estado);
   if (vieja[campo] === limpio) return nada(estado);
@@ -255,6 +259,63 @@ export function moverTrabajo(estado, tomaId, dia) {
     estado: { ...estado, tomas: estado.tomas.map((t) => (t.id === tomaId ? nueva : t)) },
     cambios: [cambioDe('tomas', nueva)]
   };
+}
+
+// ---------- el orden de los trabajos ----------
+// Se ordenan dentro de su proyecto y su día. El `orden` se reescribe entero
+// cada vez: así nunca quedan dos con el mismo número ni huecos raros.
+
+function hermanas(estado, toma) {
+  return estado.tomas
+    .filter((t) => !t.borrado && !t.hecha
+      && t.proyecto === toma.proyecto && t.diaActual === toma.diaActual)
+    .sort((x, y) => x.orden - y.orden || x.actualizado.localeCompare(y.actualizado));
+}
+
+function reordenar(estado, lista) {
+  const sello = ahora();
+  const cambios = [];
+  const nuevas = new Map();
+  lista.forEach((t, i) => {
+    if (t.orden === i) return;
+    const nueva = { ...t, orden: i, actualizado: sello };
+    nuevas.set(t.id, nueva);
+    cambios.push(cambioDe('tomas', nueva));
+  });
+  if (cambios.length === 0) return nada(estado);
+  return {
+    estado: { ...estado, tomas: estado.tomas.map((t) => nuevas.get(t.id) || t) },
+    cambios
+  };
+}
+
+function correr(estado, tomaId, paso) {
+  const toma = estado.tomas.find((t) => t.id === tomaId);
+  if (!toma) return nada(estado);
+  const lista = hermanas(estado, toma);
+  const i = lista.findIndex((t) => t.id === tomaId);
+  const j = i + paso;
+  if (i < 0 || j < 0 || j >= lista.length) return nada(estado);
+  [lista[i], lista[j]] = [lista[j], lista[i]];
+  return reordenar(estado, lista);
+}
+
+export const subirTrabajo = (estado, tomaId) => correr(estado, tomaId, -1);
+export const bajarTrabajo = (estado, tomaId) => correr(estado, tomaId, 1);
+
+// Arrastrar: el que movés queda justo arriba del que soltaste encima.
+export function soltarAntesDe(estado, tomaId, destinoId) {
+  if (tomaId === destinoId) return nada(estado);
+  const toma = estado.tomas.find((t) => t.id === tomaId);
+  const destino = estado.tomas.find((t) => t.id === destinoId);
+  if (!toma || !destino) return nada(estado);
+  if (toma.proyecto !== destino.proyecto || toma.diaActual !== destino.diaActual) return nada(estado);
+
+  const lista = hermanas(estado, toma).filter((t) => t.id !== tomaId);
+  const donde = lista.findIndex((t) => t.id === destinoId);
+  if (donde < 0) return nada(estado);
+  lista.splice(donde, 0, toma);
+  return reordenar(estado, lista);
 }
 
 export function ponerObjetivo(estado, fecha, texto) {
@@ -388,5 +449,43 @@ export function conectar(raiz, acciones) {
     if (!campo) return;
     clearTimeout(relojes.get(campo));
     avisar(campo);
+  });
+
+  // Arrastrar una tarjeta para cambiar el orden. En táctil no hay arrastre, y
+  // por eso las flechas hacen lo mismo.
+  let arrastrando = null;
+
+  raiz.addEventListener('dragstart', (evento) => {
+    const tarjeta = evento.target.closest?.('[data-toma][draggable="true"]');
+    if (!tarjeta) return;
+    arrastrando = tarjeta.dataset.toma;
+    tarjeta.classList.add('arrastrando');
+    evento.dataTransfer.effectAllowed = 'move';
+    // Firefox no arranca el arrastre si no se le pone algo adentro.
+    evento.dataTransfer.setData('text/plain', arrastrando);
+  });
+
+  raiz.addEventListener('dragover', (evento) => {
+    if (!arrastrando) return;
+    const tarjeta = evento.target.closest?.('[data-toma]');
+    if (!tarjeta || tarjeta.dataset.toma === arrastrando) return;
+    evento.preventDefault();
+    for (const otra of raiz.querySelectorAll('.destino')) otra.classList.remove('destino');
+    tarjeta.classList.add('destino');
+  });
+
+  raiz.addEventListener('drop', (evento) => {
+    const tarjeta = evento.target.closest?.('[data-toma]');
+    if (!arrastrando || !tarjeta) return;
+    evento.preventDefault();
+    acciones.soltar?.({ toma: arrastrando, destino: tarjeta.dataset.toma });
+    arrastrando = null;
+  });
+
+  raiz.addEventListener('dragend', () => {
+    arrastrando = null;
+    for (const otra of raiz.querySelectorAll('.arrastrando, .destino')) {
+      otra.classList.remove('arrastrando', 'destino');
+    }
   });
 }

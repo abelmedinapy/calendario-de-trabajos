@@ -215,6 +215,13 @@ body{
 }
 .chip .marca:hover,.chip .marca:focus-visible{background:var(--ok);outline:none}
 .oculto.chico{padding:2px 8px;font-size:14px;line-height:1}
+.oculto.flecha{padding:3px 10px;font-size:13px;line-height:1.2}
+
+/* Arrastrar para cambiar el orden. En el celular no hay arrastre, por eso
+   están también las flechas. */
+.card[draggable="true"]{cursor:grab}
+.card.arrastrando{opacity:.45;cursor:grabbing}
+.card.destino{box-shadow:0 -3px 0 var(--acid)}
 .chip s{text-decoration:line-through;text-decoration-color:var(--line);overflow-wrap:anywhere}
 
 /* ---------- tarjetas ---------- */
@@ -244,7 +251,11 @@ body{
 }
 .card.live h3 .mark{border-color:var(--color)}
 .card h3 .mark:hover,.card h3 .mark:focus-visible{border-color:var(--fg);outline:none}
-.card p{font-size:13.5px;color:var(--dim);line-height:1.4;margin-top:7px;overflow-wrap:anywhere}
+/* El detalle puede ser una lista de varios renglones: los saltos se respetan. */
+.card p{
+  font-size:13.5px;color:var(--dim);line-height:1.45;margin-top:7px;
+  overflow-wrap:anywhere;white-space:pre-wrap;
+}
 
 .layers{display:flex;gap:5px;margin-top:13px}
 .layers i{flex:1;height:7px;border-radius:4px;background:var(--ink3)}

@@ -10,6 +10,7 @@ import { arrastrar } from './arrastre.js';
 import { tableroHTML } from './vista.js';
 import {
   conectar, marcarHecha, ponerEnCurso, ponerObjetivo, moverTrabajo,
+  subirTrabajo, bajarTrabajo, soltarAntesDe,
   ponerTextoDeToma, ponerTextoDeProyecto,
   agregarBorradorDeToma, agregarBorradorDeProyecto, quitarBorradorVacio, borrar,
   ponerGrafico, ponerValorDeGrafico
@@ -249,6 +250,23 @@ function arrancar() {
       // El número cambia el dibujo de arriba, no solo el renglón que se está
       // escribiendo: queda un redibujo pendiente para cuando suelte el campo.
       if (cambios.length) quedoPorDibujar = true;
+    },
+
+    subir: ({ toma }) => {
+      soltarElCampo();
+      const { estado: nuevo, cambios } = subirTrabajo(estado, toma);
+      guardar(nuevo, cambios);
+    },
+
+    bajar: ({ toma }) => {
+      soltarElCampo();
+      const { estado: nuevo, cambios } = bajarTrabajo(estado, toma);
+      guardar(nuevo, cambios);
+    },
+
+    soltar: ({ toma, destino }) => {
+      const { estado: nuevo, cambios } = soltarAntesDe(estado, toma, destino);
+      guardar(nuevo, cambios);
     },
 
     'borrar-toma': ({ toma }) => {

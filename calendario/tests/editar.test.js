@@ -6,10 +6,15 @@ import {
   agregarProyecto, agregarToma, marcarHecha, ponerEnCurso, ponerObjetivo, borrar,
   ponerTextoDeToma, ponerTextoDeProyecto,
   agregarBorradorDeToma, agregarBorradorDeProyecto, quitarBorradorVacio,
-  ponerGrafico, ponerValorDeGrafico, moverTrabajo
+  ponerGrafico, ponerValorDeGrafico, moverTrabajo,
+  subirTrabajo, bajarTrabajo, soltarAntesDe
 } from '../src/editar.js';
 
 const DIA = '2026-10-18';
+
+const ordenados = (estado) => [...estado.tomas]
+  .sort((x, y) => x.orden - y.orden)
+  .map((t) => t.queHacer);
 
 const conProyecto = () => normalizarEstado({
   proyectos: [{ id: 'p1', nombre: 'Fortaleza', etiqueta: 'VFX' }]
@@ -378,4 +383,63 @@ test('mover no toca el día en que nació: el historial queda', () => {
 test('mover al mismo día no encola nada', () => {
   const estado = agregarToma(conProyecto(), { proyecto: 'p1', queHacer: 'roto', dia: DIA }).estado;
   assert.deepEqual(moverTrabajo(estado, estado.tomas[0].id, DIA).cambios, []);
+});
+
+test('el detalle guarda los renglones tal cual se escribieron', () => {
+  const estado = agregarToma(conProyecto(), { proyecto: 'p1', queHacer: 'roto', dia: DIA }).estado;
+  const texto = '- Ver exactamente qué va\n- Generar según pedido\n- Enviar a Juanma';
+  const { estado: despues } = ponerTextoDeToma(estado, estado.tomas[0].id, 'detalle', texto);
+  assert.equal(despues.tomas[0].detalle, texto);
+});
+
+test('el detalle se limpia por fuera pero no por dentro', () => {
+  const estado = agregarToma(conProyecto(), { proyecto: 'p1', queHacer: 'roto', dia: DIA }).estado;
+  const { estado: despues } = ponerTextoDeToma(estado, estado.tomas[0].id, 'detalle', '\n  uno\n\n  dos  \n');
+  assert.equal(despues.tomas[0].detalle, 'uno\n\n  dos');
+});
+
+test('subir un trabajo lo pone antes del de arriba', () => {
+  let estado = agregarToma(conProyecto(), { proyecto: 'p1', queHacer: 'a', dia: DIA }).estado;
+  estado = agregarToma(estado, { proyecto: 'p1', queHacer: 'b', dia: DIA }).estado;
+  estado = agregarToma(estado, { proyecto: 'p1', queHacer: 'c', dia: DIA }).estado;
+  const b = estado.tomas[1].id;
+  const { estado: despues, cambios } = subirTrabajo(estado, b);
+  assert.deepEqual(ordenados(despues), ['b', 'a', 'c']);
+  assert.equal(cambios.length, 2, 'cambian de orden los dos que se cruzaron');
+});
+
+test('bajar un trabajo lo pone después del de abajo', () => {
+  let estado = agregarToma(conProyecto(), { proyecto: 'p1', queHacer: 'a', dia: DIA }).estado;
+  estado = agregarToma(estado, { proyecto: 'p1', queHacer: 'b', dia: DIA }).estado;
+  const { estado: despues } = bajarTrabajo(estado, estado.tomas[0].id);
+  assert.deepEqual(ordenados(despues), ['b', 'a']);
+});
+
+test('el primero no sube y el último no baja', () => {
+  let estado = agregarToma(conProyecto(), { proyecto: 'p1', queHacer: 'a', dia: DIA }).estado;
+  estado = agregarToma(estado, { proyecto: 'p1', queHacer: 'b', dia: DIA }).estado;
+  assert.deepEqual(subirTrabajo(estado, estado.tomas[0].id).cambios, []);
+  assert.deepEqual(bajarTrabajo(estado, estado.tomas[1].id).cambios, []);
+});
+
+test('arrastrar un trabajo lo deja justo antes del que soltaste encima', () => {
+  let estado = agregarToma(conProyecto(), { proyecto: 'p1', queHacer: 'a', dia: DIA }).estado;
+  estado = agregarToma(estado, { proyecto: 'p1', queHacer: 'b', dia: DIA }).estado;
+  estado = agregarToma(estado, { proyecto: 'p1', queHacer: 'c', dia: DIA }).estado;
+  const [a, , c] = estado.tomas.map((t) => t.id);
+  const { estado: despues } = soltarAntesDe(estado, c, a);
+  assert.deepEqual(ordenados(despues), ['c', 'a', 'b']);
+});
+
+test('soltar un trabajo encima de sí mismo no hace nada', () => {
+  const estado = agregarToma(conProyecto(), { proyecto: 'p1', queHacer: 'a', dia: DIA }).estado;
+  const id = estado.tomas[0].id;
+  assert.deepEqual(soltarAntesDe(estado, id, id).cambios, []);
+});
+
+test('el orden no se mezcla entre proyectos', () => {
+  const dos = normalizarEstado({ proyectos: [{ id: 'p1', nombre: 'A' }, { id: 'p2', nombre: 'B' }] });
+  let estado = agregarToma(dos, { proyecto: 'p1', queHacer: 'a', dia: DIA }).estado;
+  estado = agregarToma(estado, { proyecto: 'p2', queHacer: 'z', dia: DIA }).estado;
+  assert.deepEqual(subirTrabajo(estado, estado.tomas[1].id).cambios, []);
 });

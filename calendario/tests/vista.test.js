@@ -430,3 +430,14 @@ test('cuando hay un trabajo esperando destino, el scrubber lo dice', () => {
   assert.match(html, /class="scrub eligiendo"/);
   assert.match(html, /¿A qué día/);
 });
+
+test('cada trabajo trae sus flechas para subir y bajar, ocultas', () => {
+  const html = tarjetaHTML(unaToma());
+  assert.match(html, /class="oculto[^"]*"[^>]*data-accion="subir"/);
+  assert.match(html, /class="oculto[^"]*"[^>]*data-accion="bajar"/);
+});
+
+test('en modo editar la tarjeta se puede arrastrar', () => {
+  assert.match(tarjetaHTML(unaToma(), { editando: true }), /draggable="true"/);
+  assert.doesNotMatch(tarjetaHTML(unaToma()), /draggable="true"/);
+});

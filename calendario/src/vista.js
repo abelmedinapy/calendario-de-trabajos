@@ -88,12 +88,14 @@ export function tarjetaHTML(toma, { editando = false, hoy = hoyReal() } = {}) {
     ? `<p${escribible('detalle', 'Un detalle, si hace falta')}>${escapar(toma.detalle)}</p>`
     : '';
 
-  return `<article class="card${toma.enCurso ? ' live' : ''}" data-toma="${escapar(toma.id)}">
+  return `<article class="card${toma.enCurso ? ' live' : ''}" data-toma="${escapar(toma.id)}"${editando ? ' draggable="true"' : ''}>
     <h3>${codigo}<span class="que"${escribible('queHacer', '¿Qué hay que hacer?')}>${escapar(toma.queHacer)}</span>${arrastrada}
       <button class="mark" data-accion="hecha" aria-label="Marcar como hecha"></button></h3>
     ${detalle}
     ${graficoHTML(toma, editando)}
     <div class="tools">${elegirGraficoHTML(toma, editando)}
+      <button class="oculto flecha" data-accion="subir" aria-label="Subir">↑</button>
+      <button class="oculto flecha" data-accion="bajar" aria-label="Bajar">↓</button>
       <button class="oculto" data-accion="mover">Mover de día</button>
       <button class="oculto borrar" data-accion="borrar-toma" aria-label="Borrar el trabajo">Borrar</button></div>
   </article>`;
