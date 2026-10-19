@@ -105,3 +105,22 @@ test('con seis proyectos o más el tablero avisa, sin impedir nada', () => {
 test('con cinco proyectos todavía no avisa', () => {
   assert.doesNotMatch(tableroHTML(conProyectos(5), HOY), /seis proyectos en un día/);
 });
+
+test('los controles de editar están en el HTML pero marcados como ocultos', () => {
+  const html = tableroHTML(conProyectos(1), HOY);
+  for (const accion of ['nueva-toma', 'borrar-proyecto', 'nuevo-proyecto']) {
+    assert.match(html, new RegExp(`class="oculto[^"]*"[^>]*data-accion="${accion}"`), accion);
+  }
+});
+
+test('la tarjeta trae su botón de borrar, oculto', () => {
+  assert.match(tarjetaHTML(unaToma()), /class="oculto[^"]*"[^>]*data-accion="borrar-toma"/);
+});
+
+test('el botón de marcar hecha no está oculto: es parte del dibujo', () => {
+  assert.doesNotMatch(tarjetaHTML(unaToma()), /class="oculto[^"]*"[^>]*data-accion="hecha"/);
+});
+
+test('hay un botón para mostrar los controles', () => {
+  assert.match(tableroHTML(conProyectos(1), HOY), /data-accion="editar"/);
+});

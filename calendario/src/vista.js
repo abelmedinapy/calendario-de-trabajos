@@ -56,6 +56,7 @@ export function tarjetaHTML(toma) {
       <button class="mark" data-accion="hecha" aria-label="Marcar como hecha"></button></h3>
     ${detalle}
     ${graficoHTML(toma)}
+    <button class="oculto borrar" data-accion="borrar-toma" aria-label="Borrar la toma">Borrar</button>
   </article>`;
 }
 
@@ -73,9 +74,11 @@ function columnaHTML(grupo) {
   return `<div class="col ${escapar(grupo.proyecto.color)}" data-proyecto="${escapar(grupo.proyecto.id)}">
     <span class="node"></span>
     <div class="elbow"></div>
-    <div class="pname"><h2>${escapar(grupo.proyecto.nombre)}</h2>${etiqueta}</div>
+    <div class="pname"><h2>${escapar(grupo.proyecto.nombre)}</h2>${etiqueta}
+      <button class="oculto borrar" data-accion="borrar-proyecto" aria-label="Borrar el proyecto">Borrar</button></div>
     ${chips}
     ${grupo.pendientes.map(tarjetaHTML).join('')}
+    <button class="oculto suma" data-accion="nueva-toma">Agregar una toma</button>
   </div>`;
 }
 
@@ -106,12 +109,14 @@ export function tableroHTML(estado, fecha) {
     : '';
 
   const riel = grupos.length
-    ? `<div class="rail"><div class="cols">${grupos.map(columnaHTML).join('')}</div></div>`
+    ? `<div class="rail"><div class="cols">${grupos.map(columnaHTML).join('')}</div>
+        <button class="oculto suma nuevo" data-accion="nuevo-proyecto">Agregar un proyecto</button></div>`
     : `<div class="rail vacio"><p>Todavía no hay nada anotado para hoy.</p>
         <button class="agregar" data-accion="nuevo-proyecto">Agregar un proyecto</button></div>`;
 
   return `<header class="top">
     <h1 class="title">Hoy<em>${escapar(fechaLarga(fecha))}</em></h1>
+    <button class="lapiz" data-accion="editar" aria-label="Mostrar los controles de editar">Editar</button>
   </header>
 
   <section class="panel">

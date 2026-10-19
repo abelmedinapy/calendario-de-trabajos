@@ -37,7 +37,7 @@ body{
 }
 
 /* ---------- barra de arriba ---------- */
-.top{padding:10px 8px 18px}
+.top{padding:10px 8px 18px;display:flex;align-items:center;gap:14px}
 .title{
   font-family:'Bricolage Grotesque',Figtree,sans-serif;
   font-size:34px;font-weight:500;letter-spacing:-.02em;line-height:1;
@@ -46,6 +46,29 @@ body{
   font-style:normal;color:var(--dim);font-size:15px;font-weight:400;
   margin-left:12px;letter-spacing:0;font-family:Figtree,sans-serif;
 }
+
+/* Los controles de editar no se ven en reposo: la captura tiene que salir
+   limpia. Aparecen al pasar el mouse por la columna, al llegar con el teclado,
+   o cuando el botón de editar los enciende para todo el tablero. */
+.oculto{
+  opacity:0;pointer-events:none;transition:opacity .12s ease;
+  background:none;border:1px solid var(--line);border-radius:999px;
+  color:var(--dim);font:inherit;font-size:12px;padding:5px 12px;cursor:pointer;
+}
+.oculto.borrar{border-color:transparent;color:#C8705F}
+.oculto.suma{margin:4px 0 0 8px}
+.oculto.nuevo{margin-top:6px}
+#tablero.editando .oculto,
+.col:hover .oculto,
+.col:focus-within .oculto,
+.oculto:focus-visible{opacity:1;pointer-events:auto}
+.oculto:hover{color:var(--fg);border-color:var(--dim)}
+
+.lapiz{
+  margin-left:auto;background:none;border:1px solid var(--line);border-radius:999px;
+  color:var(--dim);font:inherit;font-size:12.5px;padding:7px 15px;cursor:pointer;
+}
+#tablero.editando .lapiz{background:var(--acid);border-color:var(--acid);color:#14170D;font-weight:600}
 
 /* ---------- panel ---------- */
 .panel{
@@ -110,7 +133,7 @@ body{
   border-left:1px solid var(--line);border-bottom:1px solid var(--line);
   border-bottom-left-radius:14px;
 }
-.pname{display:flex;align-items:baseline;gap:9px;margin:-20px 0 14px 70px;min-width:0}
+.pname{display:flex;align-items:baseline;gap:9px;margin:-20px 0 14px 70px;min-width:0;flex-wrap:wrap}
 .pname h2{
   font-family:'Bricolage Grotesque',Figtree,sans-serif;
   font-size:21px;font-weight:500;letter-spacing:-.01em;

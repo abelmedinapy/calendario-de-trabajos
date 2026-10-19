@@ -1,0 +1,170 @@
+// Cada edición devuelve el estado nuevo y los cambios para la cola. Son
+// funciones puras: no tocan el DOM ni la red, así se pueden probar solas.
+// Lo único que toca el DOM es `conectar`, al final.
+
+const COLORES = ['acid', 'ok', 'violet', 'warn'];
+
+const ahora = () => new Date().toISOString();
+const nuevoId = () => (globalThis.crypto?.randomUUID
+  ? globalThis.crypto.randomUUID()
+  : `id-${Math.random().toString(36).slice(2)}-${Date.now()}`);
+
+const nada = (estado) => ({ estado, cambios: [] });
+
+const cambioDe = (tabla, fila, borrado = false) => ({
+  id: tabla === 'dias' ? fila.fecha : fila.id,
+  tabla,
+  fila,
+  borrado
+});
+
+export function agregarProyecto(estado, { nombre, etiqueta = '', color } = {}) {
+  const limpio = (nombre || '').trim();
+  if (!limpio) return nada(estado);
+  const proyecto = {
+    id: nuevoId(),
+    nombre: limpio,
+    etiqueta: etiqueta.trim(),
+    color: COLORES.includes(color) ? color : COLORES[estado.proyectos.length % COLORES.length],
+    archivado: false,
+    actualizado: ahora()
+  };
+  return {
+    estado: { ...estado, proyectos: [...estado.proyectos, proyecto] },
+    cambios: [cambioDe('proyectos', proyecto)]
+  };
+}
+
+export function agregarToma(estado, { proyecto, codigo = '', queHacer, detalle = '', dia } = {}) {
+  const limpio = (queHacer || '').trim();
+  if (!limpio || !proyecto || !dia) return nada(estado);
+  const hermanas = estado.tomas.filter((t) => t.proyecto === proyecto);
+  const toma = {
+    id: nuevoId(),
+    proyecto,
+    codigo: codigo.trim(),
+    queHacer: limpio,
+    detalle: detalle.trim(),
+    diaOrigen: dia,
+    diaActual: dia,
+    hecha: false,
+    diaHecha: null,
+    enCurso: false,
+    grafico: null,
+    graficoValores: null,
+    orden: hermanas.length ? Math.max(...hermanas.map((t) => t.orden)) + 1 : 0,
+    actualizado: ahora()
+  };
+  return {
+    estado: { ...estado, tomas: [...estado.tomas, toma] },
+    cambios: [cambioDe('tomas', toma)]
+  };
+}
+
+export function marcarHecha(estado, tomaId, dia) {
+  const vieja = estado.tomas.find((t) => t.id === tomaId);
+  if (!vieja) return nada(estado);
+  const hecha = !vieja.hecha;
+  const nueva = {
+    ...vieja,
+    hecha,
+    diaHecha: hecha ? dia : null,
+    enCurso: false,
+    actualizado: ahora()
+  };
+  return {
+    estado: { ...estado, tomas: estado.tomas.map((t) => (t.id === tomaId ? nueva : t)) },
+    cambios: [cambioDe('tomas', nueva)]
+  };
+}
+
+export function ponerEnCurso(estado, tomaId) {
+  const sello = ahora();
+  const cambios = [];
+  const tomas = estado.tomas.map((t) => {
+    const deberia = t.id === tomaId && !t.hecha;
+    if (t.enCurso === deberia) return t;
+    const nueva = { ...t, enCurso: deberia, actualizado: sello };
+    cambios.push(cambioDe('tomas', nueva));
+    return nueva;
+  });
+  return cambios.length ? { estado: { ...estado, tomas }, cambios } : nada(estado);
+}
+
+export function ponerObjetivo(estado, fecha, texto) {
+  const viejo = estado.dias.find((d) => d.fecha === fecha);
+  const dia = {
+    fecha,
+    objetivo: (texto || '').trim(),
+    renderDice: viejo ? viejo.renderDice : '',
+    actualizado: ahora()
+  };
+  return {
+    estado: {
+      ...estado,
+      dias: viejo
+        ? estado.dias.map((d) => (d.fecha === fecha ? dia : d))
+        : [...estado.dias, dia]
+    },
+    cambios: [cambioDe('dias', dia)]
+  };
+}
+
+export function borrar(estado, tabla, id) {
+  if (tabla === 'proyectos') {
+    const proyecto = estado.proyectos.find((p) => p.id === id);
+    if (!proyecto) return nada(estado);
+    const suyas = estado.tomas.filter((t) => t.proyecto === id);
+    return {
+      estado: {
+        ...estado,
+        proyectos: estado.proyectos.filter((p) => p.id !== id),
+        tomas: estado.tomas.filter((t) => t.proyecto !== id)
+      },
+      cambios: [
+        ...suyas.map((t) => cambioDe('tomas', t, true)),
+        cambioDe('proyectos', proyecto, true)
+      ]
+    };
+  }
+
+  if (tabla === 'tomas') {
+    const toma = estado.tomas.find((t) => t.id === id);
+    if (!toma) return nada(estado);
+    return {
+      estado: { ...estado, tomas: estado.tomas.filter((t) => t.id !== id) },
+      cambios: [cambioDe('tomas', toma, true)]
+    };
+  }
+
+  return nada(estado);
+}
+
+// Un solo oyente en la raíz: las tarjetas se redibujan enteras y no hay que
+// volver a atar nada.
+export function conectar(raiz, acciones) {
+  raiz.addEventListener('click', (evento) => {
+    const boton = evento.target.closest('[data-accion]');
+    if (boton) {
+      const tarjeta = boton.closest('[data-toma]');
+      const columna = boton.closest('[data-proyecto]');
+      acciones[boton.dataset.accion]?.({
+        toma: tarjeta?.dataset.toma,
+        proyecto: columna?.dataset.proyecto
+      });
+      return;
+    }
+    const dia = evento.target.closest('[data-dia]');
+    if (dia) {
+      acciones.dia?.({ dia: dia.dataset.dia });
+      return;
+    }
+    const tarjeta = evento.target.closest('[data-toma]');
+    if (tarjeta) acciones.enCurso?.({ toma: tarjeta.dataset.toma });
+  });
+
+  raiz.addEventListener('blur', (evento) => {
+    const campo = evento.target.closest('[data-accion="objetivo"]');
+    if (campo) acciones.objetivo?.({ texto: campo.textContent });
+  }, true);
+}
