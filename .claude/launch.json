@@ -1,0 +1,28 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "calendario",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8788",
+        "--directory",
+        "calendario"
+      ],
+      "port": 8788
+    },
+    {
+      "name": "calendario-dev",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "--prefix",
+        "calendario",
+        "run",
+        "dev"
+      ],
+      "port": 8799
+    }
+  ]
+}
