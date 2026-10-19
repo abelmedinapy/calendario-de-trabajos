@@ -3,7 +3,8 @@ import assert from 'node:assert/strict';
 
 import { normalizarEstado, agruparPorProyecto } from '../src/modelo.js';
 import {
-  agregarProyecto, agregarToma, marcarHecha, ponerEnCurso, ponerObjetivo, borrar
+  agregarProyecto, agregarToma, marcarHecha, ponerEnCurso, ponerObjetivo, borrar,
+  ponerTextoDeToma
 } from '../src/editar.js';
 
 const DIA = '2026-10-18';
@@ -133,4 +134,41 @@ test('borrar un proyecto deja lápidas de él y de sus tomas', () => {
   assert.equal(despues.proyectos[0].borrado, true);
   assert.deepEqual(despues.tomas.map((t) => t.borrado), [true, true]);
   assert.equal(cambios.length, 3);
+});
+
+test('se puede corregir el texto de una toma ya escrita', () => {
+  const estado = agregarToma(conProyecto(), { proyecto: 'p1', queHacer: 'Generar Transicion', dia: DIA }).estado;
+  const id = estado.tomas[0].id;
+  const { estado: despues, cambios } = ponerTextoDeToma(estado, id, 'queHacer', 'Generar transición');
+  assert.equal(despues.tomas[0].queHacer, 'Generar transición');
+  assert.equal(cambios[0].id, id);
+  assert.equal(cambios[0].tabla, 'tomas');
+});
+
+test('se le puede poner código y detalle a una toma que no los tenía', () => {
+  const estado = agregarToma(conProyecto(), { proyecto: 'p1', queHacer: 'roto', dia: DIA }).estado;
+  const id = estado.tomas[0].id;
+  const conCodigo = ponerTextoDeToma(estado, id, 'codigo', 'T22').estado;
+  const conDetalle = ponerTextoDeToma(conCodigo, id, 'detalle', 'sale en el 118').estado;
+  assert.equal(conDetalle.tomas[0].codigo, 'T22');
+  assert.equal(conDetalle.tomas[0].detalle, 'sale en el 118');
+});
+
+test('no se puede dejar una toma sin texto por error', () => {
+  const estado = agregarToma(conProyecto(), { proyecto: 'p1', queHacer: 'roto', dia: DIA }).estado;
+  const { estado: despues, cambios } = ponerTextoDeToma(estado, estado.tomas[0].id, 'queHacer', '   ');
+  assert.deepEqual(despues, estado);
+  assert.deepEqual(cambios, []);
+});
+
+test('un campo que no es de texto no se toca', () => {
+  const estado = agregarToma(conProyecto(), { proyecto: 'p1', queHacer: 'roto', dia: DIA }).estado;
+  const { cambios } = ponerTextoDeToma(estado, estado.tomas[0].id, 'hecha', 'sí');
+  assert.deepEqual(cambios, []);
+});
+
+test('escribir el mismo texto no encola un cambio al pedo', () => {
+  const estado = agregarToma(conProyecto(), { proyecto: 'p1', queHacer: 'roto', dia: DIA }).estado;
+  const { cambios } = ponerTextoDeToma(estado, estado.tomas[0].id, 'queHacer', 'roto');
+  assert.deepEqual(cambios, []);
 });

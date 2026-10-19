@@ -92,6 +92,27 @@ export function ponerEnCurso(estado, tomaId) {
   return cambios.length ? { estado: { ...estado, tomas }, cambios } : nada(estado);
 }
 
+const TEXTOS_DE_TOMA = ['queHacer', 'codigo', 'detalle'];
+
+// Corregir lo que ya está escrito. Sin esto, una toma con un error se arregla
+// borrándola y escribiéndola de nuevo.
+export function ponerTextoDeToma(estado, tomaId, campo, texto) {
+  if (!TEXTOS_DE_TOMA.includes(campo)) return nada(estado);
+  const vieja = estado.tomas.find((t) => t.id === tomaId);
+  if (!vieja) return nada(estado);
+
+  const limpio = (texto || '').trim();
+  // queHacer es lo único que no puede quedar vacío: es el renglón de la tarjeta.
+  if (campo === 'queHacer' && !limpio) return nada(estado);
+  if (vieja[campo] === limpio) return nada(estado);
+
+  const nueva = { ...vieja, [campo]: limpio, actualizado: ahora() };
+  return {
+    estado: { ...estado, tomas: estado.tomas.map((t) => (t.id === tomaId ? nueva : t)) },
+    cambios: [cambioDe('tomas', nueva)]
+  };
+}
+
 export function ponerObjetivo(estado, fecha, texto) {
   const viejo = estado.dias.find((d) => d.fecha === fecha);
   const dia = {
@@ -170,29 +191,41 @@ export function conectar(raiz, acciones) {
       acciones.dia?.({ dia: dia.dataset.dia });
       return;
     }
+    if (campoDe(evento.target)) return;
     const tarjeta = evento.target.closest('[data-toma]');
     if (tarjeta) acciones.enCurso?.({ toma: tarjeta.dataset.toma });
   });
 
-  // El objetivo se guarda mientras se escribe, con un respiro de medio segundo.
-  // Atado solo al blur se perdía cuando el teclado del celular se cierra sin
+  // Los textos se guardan mientras se escriben, con un respiro de medio segundo.
+  // Atados solo al blur se perdían cuando el teclado del celular se cierra sin
   // sacarle el foco al campo.
-  let reloj = null;
-  const guardarObjetivo = (campo) => {
-    clearTimeout(reloj);
-    reloj = setTimeout(() => acciones.objetivo?.({ texto: campo.textContent }), 500);
-  };
+  const relojes = new Map();
+
+  const campoDe = (nodo) => nodo.closest?.('[data-accion="objetivo"], [data-campo]');
+
+  function avisar(campo) {
+    if (campo.dataset.accion === 'objetivo') {
+      acciones.objetivo?.({ texto: campo.textContent });
+    } else {
+      acciones.textoToma?.({
+        toma: campo.closest('[data-toma]')?.dataset.toma,
+        campo: campo.dataset.campo,
+        texto: campo.textContent
+      });
+    }
+  }
 
   raiz.addEventListener('input', (evento) => {
-    const campo = evento.target.closest('[data-accion="objetivo"]');
-    if (campo) guardarObjetivo(campo);
+    const campo = campoDe(evento.target);
+    if (!campo) return;
+    clearTimeout(relojes.get(campo));
+    relojes.set(campo, setTimeout(() => avisar(campo), 500));
   });
 
   raiz.addEventListener('focusout', (evento) => {
-    const campo = evento.target.closest('[data-accion="objetivo"]');
-    if (campo) {
-      clearTimeout(reloj);
-      acciones.objetivo?.({ texto: campo.textContent });
-    }
+    const campo = campoDe(evento.target);
+    if (!campo) return;
+    clearTimeout(relojes.get(campo));
+    avisar(campo);
   });
 }

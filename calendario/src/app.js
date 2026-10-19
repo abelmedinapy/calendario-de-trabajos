@@ -9,7 +9,8 @@ import { sincronizar } from './sync.js';
 import { arrastrar } from './arrastre.js';
 import { tableroHTML } from './vista.js';
 import {
-  conectar, agregarProyecto, agregarToma, marcarHecha, ponerEnCurso, ponerObjetivo, borrar
+  conectar, agregarProyecto, agregarToma, marcarHecha, ponerEnCurso, ponerObjetivo,
+  ponerTextoDeToma, borrar
 } from './editar.js';
 
 export function decidirArranque({ hayLlave, hayLocal, hayRed }) {
@@ -83,15 +84,25 @@ function arrancar() {
     return lineas.map((l) => `<p class="aviso">${l}</p>`).join('');
   }
 
-  // Redibujar mientras Abel escribe el objetivo le destruye el campo debajo del
-  // cursor y se lleva puesto lo que estaba tecleando. Se espera a que salga.
-  const escribiendoElObjetivo = () =>
-    Boolean(document.activeElement?.closest?.('[data-accion="objetivo"]'));
+  // Redibujar mientras Abel escribe le destruye el campo debajo del cursor y se
+  // lleva puesto lo que estaba tecleando. Se espera a que salga.
+  const escribiendo = () =>
+    Boolean(document.activeElement?.closest?.('[data-accion="objetivo"], [data-campo]'));
+
+  // Guarda y sube sin redibujar: el campo ya muestra lo que se escribió, y
+  // volver a pintarlo le saca el cursor de lugar.
+  const guardarSinDibujar = (nuevo, cambios) => {
+    if (!cambios.length) return;
+    estado = nuevo;
+    almacen.guardarEstado(estado);
+    for (const cambio of cambios) almacen.encolar(cambio);
+    subir();
+  };
 
   let quedoPorDibujar = false;
 
   function dibujar() {
-    if (escribiendoElObjetivo()) {
+    if (escribiendo()) {
       quedoPorDibujar = true;
       return;
     }
@@ -101,7 +112,7 @@ function arrancar() {
   }
 
   raiz.addEventListener('focusout', (evento) => {
-    if (evento.target.closest?.('[data-accion="objetivo"]') && quedoPorDibujar) {
+    if (evento.target.closest?.('[data-accion="objetivo"], [data-campo]') && quedoPorDibujar) {
       setTimeout(dibujar, 0);
     }
   });
@@ -204,12 +215,12 @@ function arrancar() {
 
     objetivo: ({ texto }) => {
       const { estado: nuevo, cambios } = ponerObjetivo(estado, dia, texto);
-      // Sin redibujar: el campo ya muestra lo que Abel escribió, y volver a
-      // pintarlo mientras escribe le saca el cursor de lugar.
-      estado = nuevo;
-      almacen.guardarEstado(estado);
-      for (const cambio of cambios) almacen.encolar(cambio);
-      subir();
+      guardarSinDibujar(nuevo, cambios);
+    },
+
+    textoToma: ({ toma, campo, texto }) => {
+      const { estado: nuevo, cambios } = ponerTextoDeToma(estado, toma, campo, texto);
+      guardarSinDibujar(nuevo, cambios);
     },
 
     dia: ({ dia: elegido }) => {

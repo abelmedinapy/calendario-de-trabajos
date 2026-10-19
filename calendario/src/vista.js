@@ -44,15 +44,27 @@ function graficoHTML(toma) {
   return '';
 }
 
-export function tarjetaHTML(toma) {
+// `editando` hace escribibles los textos de la tarjeta. En reposo no lo son,
+// así que la captura no se toca sin querer y no hay nada de más en la foto.
+export function tarjetaHTML(toma, { editando = false } = {}) {
   const atraso = diasDeAtraso(toma.diaOrigen, toma.diaActual);
   const arrastrada = atraso > 0
     ? `<span class="late">${atraso} ${atraso === 1 ? 'día' : 'días'}</span>`
     : '';
-  const codigo = toma.codigo ? `<u>${escapar(toma.codigo)}</u>` : '';
-  const detalle = toma.detalle ? `<p>${escapar(toma.detalle)}</p>` : '';
+
+  const escribible = (campo, vacio) => editando
+    ? ` contenteditable="plaintext-only" data-campo="${campo}" data-vacio="${vacio}"`
+    : '';
+
+  const codigo = (toma.codigo || editando)
+    ? `<u${escribible('codigo', 'código')}>${escapar(toma.codigo)}</u>`
+    : '';
+  const detalle = (toma.detalle || editando)
+    ? `<p${escribible('detalle', 'Un detalle, si hace falta')}>${escapar(toma.detalle)}</p>`
+    : '';
+
   return `<article class="card${toma.enCurso ? ' live' : ''}" data-toma="${escapar(toma.id)}">
-    <h3>${codigo}<span class="que">${escapar(toma.queHacer)}</span>${arrastrada}
+    <h3>${codigo}<span class="que"${escribible('queHacer', '')}>${escapar(toma.queHacer)}</span>${arrastrada}
       <button class="mark" data-accion="hecha" aria-label="Marcar como hecha"></button></h3>
     ${detalle}
     ${graficoHTML(toma)}
@@ -68,7 +80,7 @@ function chipHTML(toma) {
     <button class="oculto borrar chico" data-accion="borrar-toma" aria-label="Borrar la toma">×</button></span>`;
 }
 
-function columnaHTML(grupo) {
+function columnaHTML(grupo, editando) {
   const etiqueta = grupo.proyecto.etiqueta
     ? `<span>${escapar(grupo.proyecto.etiqueta)}</span>` : '';
   const chips = grupo.hechas.length
@@ -79,7 +91,7 @@ function columnaHTML(grupo) {
     <div class="pname"><h2>${escapar(grupo.proyecto.nombre)}</h2>${etiqueta}
       <button class="oculto borrar" data-accion="borrar-proyecto" aria-label="Borrar el proyecto">Borrar</button></div>
     ${chips}
-    ${grupo.pendientes.map(tarjetaHTML).join('')}
+    ${grupo.pendientes.map((t) => tarjetaHTML(t, { editando })).join('')}
     <button class="oculto suma" data-accion="nueva-toma">Agregar una toma</button>
   </div>`;
 }
@@ -115,7 +127,7 @@ export function tableroHTML(estado, fecha, { editando = false } = {}) {
     : '';
 
   const riel = grupos.length
-    ? `<div class="rail"><div class="cols">${grupos.map(columnaHTML).join('')}</div>
+    ? `<div class="rail"><div class="cols">${grupos.map((g) => columnaHTML(g, editando)).join('')}</div>
         <button class="oculto suma nuevo" data-accion="nuevo-proyecto">Agregar un proyecto</button></div>`
     : `<div class="rail vacio"><p>Todavía no hay nada anotado para hoy.</p>
         <button class="agregar" data-accion="nuevo-proyecto">Agregar un proyecto</button></div>`;

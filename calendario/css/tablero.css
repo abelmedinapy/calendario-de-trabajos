@@ -106,6 +106,9 @@ body{
 }
 .goal p:focus{outline:2px solid var(--acid);outline-offset:6px}
 .goal p[data-accion="objetivo"]:empty::before{content:attr(data-vacio);color:var(--dim)}
+[data-campo]:empty::before{content:attr(data-vacio);color:var(--dim);opacity:.7}
+[data-campo]{border-radius:6px;outline-offset:3px}
+[data-campo]:focus{outline:2px solid var(--color,var(--acid))}
 
 .stats{display:flex;gap:26px;padding-top:2px}
 .stat i{

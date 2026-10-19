@@ -196,3 +196,30 @@ test('con el día ya cargado, un proyecto vacío no ensucia la captura', () => {
 test('sin proyectos ni tomas sigue invitando a anotar', () => {
   assert.match(tableroHTML(VACIO, HOY), /Todavía no hay nada anotado/);
 });
+
+test('en modo editar se puede escribir encima del texto de la tarjeta', () => {
+  const html = tarjetaHTML(unaToma({ codigo: 'T22', detalle: 'sale en el 118' }), { editando: true });
+  for (const campo of ['queHacer', 'codigo', 'detalle']) {
+    assert.match(html, new RegExp(`contenteditable="plaintext-only"[^>]*data-campo="${campo}"`), campo);
+  }
+});
+
+test('en reposo la tarjeta no es editable: la captura no se toca sin querer', () => {
+  assert.doesNotMatch(tarjetaHTML(unaToma({ codigo: 'T22', detalle: 'x' })), /contenteditable/);
+});
+
+test('en modo editar aparecen el código y el detalle vacíos para poder ponerlos', () => {
+  const html = tarjetaHTML(unaToma(), { editando: true });
+  assert.match(html, /data-campo="codigo"/);
+  assert.match(html, /data-campo="detalle"/);
+  assert.match(html, /data-vacio="/);
+});
+
+test('el tablero pasa el modo editar a sus tarjetas', () => {
+  const estado = normalizarEstado({
+    proyectos: [{ id: 'p1', nombre: 'Fortaleza' }],
+    tomas: [{ id: 't1', proyecto: 'p1', queHacer: 'roto', diaActual: HOY }]
+  });
+  assert.doesNotMatch(tableroHTML(estado, HOY), /data-campo="queHacer"/);
+  assert.match(tableroHTML(estado, HOY, { editando: true }), /data-campo="queHacer"/);
+});
