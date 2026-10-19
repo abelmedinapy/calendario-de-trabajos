@@ -259,6 +259,22 @@ body{
 .meta{display:flex;justify-content:space-between;align-items:baseline;gap:12px;
   margin-top:10px;font-size:12px;color:var(--dim)}
 .meta b{color:var(--fg);font-size:15px;font-weight:600;white-space:nowrap}
+/* Los números del gráfico se corrigen donde se leen. En reposo son texto
+   pelado: la captura sale igual que siempre. */
+.meta [data-valor]{border-radius:6px;outline-offset:3px;min-width:1ch;display:inline-block}
+.meta [data-valor]:focus{outline:2px solid var(--color,var(--acid))}
+.meta [data-valor]:empty::before{content:attr(data-vacio);color:var(--dim);opacity:.7}
+
+/* Elegir el gráfico y borrar, todo en una fila: en reposo está escondida pero
+   ocupa un solo renglón, como cuando era solo el botón de borrar. */
+.card .tools{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+#tablero.editando .card .tools{margin-top:12px}
+.card .tools .oculto{font-size:11.5px;padding:4px 11px}
+.card .tools .elegido{
+  background:var(--color);border-color:var(--color);color:#14170D;font-weight:600;
+}
+.card .tools .elegido:hover{color:#14170D;border-color:var(--color)}
+.card .tools .borrar{margin-left:auto}
 
 /* ---------- día vacío ---------- */
 .rail.vacio{

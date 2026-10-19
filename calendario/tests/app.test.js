@@ -35,3 +35,17 @@ test('todos los módulos que importa app.js están en la lista del cache', () =>
   assert.ok(importados.length > 0, 'app.js no importa nada');
   for (const m of importados) assert.ok(l.includes(`./src/${m}`), `falta ${m}`);
 });
+
+test('app.js importa todo lo que usa de editar.js', () => {
+  // app.js solo corre en el navegador, así que una función usada sin importar
+  // no rompe ningún test: la app se rompe recién al apretar el botón.
+  const app = readFileSync(raiz + 'src/app.js', 'utf-8');
+  const exportados = [...readFileSync(raiz + 'src/editar.js', 'utf-8')
+    .matchAll(/export function (\w+)/g)].map((m) => m[1]);
+  const importados = app.match(/import \{([\s\S]*?)\} from '\.\/editar\.js'/)[1];
+  assert.ok(exportados.length > 0, 'editar.js no exporta nada');
+  for (const nombre of exportados) {
+    if (!new RegExp(`\\b${nombre}\\(`).test(app)) continue;
+    assert.ok(new RegExp(`\\b${nombre}\\b`).test(importados), `falta importar ${nombre}`);
+  }
+});

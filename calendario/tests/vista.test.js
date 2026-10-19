@@ -315,6 +315,102 @@ test('sin nada anotado AM no muestra avance inventado', () => {
   assert.match(tableroHTML(VACIO, HOY), /data-avance="0"/);
 });
 
+// ---------- elegir y cargar el gráfico chico ----------
+// Los tres gráficos estaban dibujados pero no había forma de ponerlos desde la
+// pantalla. Se eligen con un clic y los números se escriben en la tarjeta.
+
+test('la tarjeta ofrece los tres gráficos y la opción de ninguno', () => {
+  const html = tarjetaHTML(unaToma(), { editando: true });
+  for (const tipo of ['capas', 'curva', 'cadencia']) {
+    assert.match(html, new RegExp(`data-accion="grafico"[^>]*data-grafico="${tipo}"`), tipo);
+  }
+  assert.match(html, /data-accion="grafico"[^>]*data-grafico=""/);
+});
+
+test('esos controles están ocultos como el resto', () => {
+  const html = tarjetaHTML(unaToma(), { editando: true });
+  assert.equal(cuantos(html, /class="oculto[^"]*"[^>]*data-accion="grafico"/g), 4);
+});
+
+test('en reposo no están: la tarjeta de la captura queda igual que siempre', () => {
+  // Si estuvieran escondidos pero puestos, en el celular la fila se parte en
+  // dos y la tarjeta crece un renglón aunque no se vea nada.
+  const html = tarjetaHTML(unaToma());
+  assert.doesNotMatch(html, /data-accion="grafico"/);
+  assert.doesNotMatch(tableroHTML(conProyectos(1), HOY), /data-accion="grafico"|data-valor=/);
+});
+
+test('van en la misma fila que borrar', () => {
+  const html = tarjetaHTML(unaToma(), { editando: true });
+  const fila = html.match(/<div class="tools">([\s\S]*?)<\/div>/);
+  assert.ok(fila, 'no encontré la fila de controles');
+  assert.equal(cuantos(fila[1], /data-accion="grafico"/g), 4);
+  assert.match(fila[1], /data-accion="borrar-toma"/);
+});
+
+test('el gráfico que ya tiene se nota en su botón', () => {
+  const html = tarjetaHTML(unaToma({ grafico: 'curva', graficoValores: { ev: '+0.5' } }),
+    { editando: true });
+  assert.match(html, /class="oculto elegido"[^>]*data-grafico="curva"/);
+  assert.equal(cuantos(html, /elegido/g), 1);
+});
+
+test('sin gráfico, el elegido es "ninguno"', () => {
+  assert.match(tarjetaHTML(unaToma(), { editando: true }), /class="oculto elegido"[^>]*data-grafico=""/);
+});
+
+test('en modo editar los números de las capas se escriben en la tarjeta', () => {
+  const html = tarjetaHTML(unaToma({ grafico: 'capas', graficoValores: { hechas: 2, total: 3 } }),
+    { editando: true });
+  for (const valor of ['hechas', 'total']) {
+    assert.match(html, new RegExp(`contenteditable="plaintext-only"[^>]*data-valor="${valor}"`), valor);
+  }
+  assert.match(html, /data-valor="hechas"[^>]*>2</);
+  assert.match(html, /data-valor="total"[^>]*>3</);
+});
+
+test('en modo editar la curva deja escribir lo que dice al pie', () => {
+  const html = tarjetaHTML(unaToma({ grafico: 'curva', graficoValores: { ev: '+0.5 EV' } }),
+    { editando: true });
+  assert.match(html, /contenteditable="plaintext-only"[^>]*data-valor="ev"[^>]*>\+0\.5 EV</);
+});
+
+test('en modo editar la cadencia deja escribir los cuadros y las imágenes por segundo', () => {
+  const html = tarjetaHTML(unaToma({ grafico: 'cadencia', graficoValores: { cada: 3, imgs: 8 } }),
+    { editando: true });
+  assert.match(html, /contenteditable="plaintext-only"[^>]*data-valor="cada"[^>]*>3</);
+  assert.match(html, /contenteditable="plaintext-only"[^>]*data-valor="imgs"[^>]*>8</);
+  assert.match(html, /1 de cada/);
+  assert.match(html, /img\/s/);
+});
+
+test('en reposo los valores del gráfico no se pueden tocar', () => {
+  const html = tarjetaHTML(unaToma({ grafico: 'capas', graficoValores: { hechas: 2, total: 3 } }));
+  assert.doesNotMatch(html, /contenteditable/);
+  assert.match(html, /2/);
+  assert.match(html, /3/);
+});
+
+test('un valor del gráfico con HTML adentro sale escapado', () => {
+  const html = tarjetaHTML(unaToma({ grafico: 'curva', graficoValores: { ev: '<script>alert(1)</script>' } }),
+    { editando: true });
+  assert.doesNotMatch(html, /<script>/);
+  assert.match(html, /&lt;script&gt;/);
+});
+
+test('el campo vacío de la curva avisa qué va adentro', () => {
+  const html = tarjetaHTML(unaToma({ grafico: 'curva', graficoValores: { ev: '' } }), { editando: true });
+  assert.match(html, /data-valor="ev"[^>]*data-vacio="|data-vacio="[^"]*"[^>]*data-valor="ev"/);
+});
+
+test('el tablero deja elegir el gráfico de cada trabajo en modo editar', () => {
+  const estado = normalizarEstado({
+    proyectos: [{ id: 'p1', nombre: 'Fortaleza' }],
+    tomas: [{ id: 't1', proyecto: 'p1', queHacer: 'roto', diaActual: HOY }]
+  });
+  assert.match(tableroHTML(estado, HOY, { editando: true }), /data-accion="grafico"/);
+});
+
 test('lo que mandaste a un día futuro no figura como atrasado', () => {
   const futuro = unaToma({ diaOrigen: HOY, diaActual: '2026-10-21' });
   assert.doesNotMatch(tarjetaHTML(futuro, { hoy: HOY }), /class="late"/);
