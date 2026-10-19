@@ -5,7 +5,7 @@ export function arrastrar(estado, hoy, ahora = new Date()) {
   const sello = ahora.toISOString();
   const movidas = [];
   const tomas = estado.tomas.map((t) => {
-    if (t.hecha || t.diaActual >= hoy) return t;
+    if (t.borrado || t.hecha || t.diaActual >= hoy) return t;
     movidas.push(t.id);
     return { ...t, diaActual: hoy, actualizado: sello };
   });
@@ -18,6 +18,7 @@ export function diasConTrabajo(estado, dias) {
   const pedidos = new Set(dias);
   const conTrabajo = new Set();
   for (const t of estado.tomas) {
+    if (t.borrado) continue;
     for (const d of [t.diaOrigen, t.diaHecha, t.hecha ? null : t.diaActual]) {
       if (d && pedidos.has(d)) conTrabajo.add(d);
     }

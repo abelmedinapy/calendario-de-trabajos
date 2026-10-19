@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { normalizarEstado } from '../src/modelo.js';
+import { normalizarEstado, agruparPorProyecto } from '../src/modelo.js';
 import {
   agregarProyecto, agregarToma, marcarHecha, ponerEnCurso, ponerObjetivo, borrar
 } from '../src/editar.js';
@@ -25,7 +25,7 @@ test('agregarToma devuelve el cambio listo para la cola', () => {
   const { estado, cambios } = agregarToma(conProyecto(), { proyecto: 'p1', queHacer: 'roto', dia: DIA });
   assert.equal(cambios.length, 1);
   assert.equal(cambios[0].tabla, 'tomas');
-  assert.equal(cambios[0].borrado, false);
+  assert.equal(cambios[0].fila.borrado, false);
   assert.equal(cambios[0].id, estado.tomas[0].id);
 });
 
@@ -69,21 +69,19 @@ test('ponerEnCurso deja una sola encendida y encola las dos que cambiaron', () =
   assert.deepEqual(cambios.map((c) => c.id).sort(), [a, b].sort());
 });
 
-test('borrar un proyecto borra también sus tomas', () => {
+test('borrar un proyecto lo saca del tablero junto con sus tomas', () => {
   let estado = agregarToma(conProyecto(), { proyecto: 'p1', queHacer: 'a', dia: DIA }).estado;
   estado = agregarToma(estado, { proyecto: 'p1', queHacer: 'b', dia: DIA }).estado;
   const { estado: despues, cambios } = borrar(estado, 'proyectos', 'p1');
-  assert.deepEqual(despues.proyectos, []);
-  assert.deepEqual(despues.tomas, []);
+  assert.deepEqual(agruparPorProyecto(despues, DIA), []);
   assert.equal(cambios.length, 3);
-  assert.ok(cambios.every((c) => c.borrado === true));
 });
 
 test('borrar una toma deja el proyecto en paz', () => {
   const estado = agregarToma(conProyecto(), { proyecto: 'p1', queHacer: 'a', dia: DIA }).estado;
   const { estado: despues, cambios } = borrar(estado, 'tomas', estado.tomas[0].id);
-  assert.equal(despues.proyectos.length, 1);
-  assert.deepEqual(despues.tomas, []);
+  assert.equal(despues.proyectos[0].borrado, false);
+  assert.deepEqual(agruparPorProyecto(despues, DIA, { incluirVacios: true })[0].pendientes, []);
   assert.equal(cambios.length, 1);
 });
 
@@ -118,4 +116,21 @@ test('editar no muta el estado que recibe', () => {
   const previo = conProyecto();
   agregarToma(previo, { proyecto: 'p1', queHacer: 'a', dia: DIA });
   assert.deepEqual(previo.tomas, []);
+});
+
+test('borrar deja una lápida en vez de sacar la fila, para que el otro aparato se entere', () => {
+  const estado = agregarToma(conProyecto(), { proyecto: 'p1', queHacer: 'a', dia: DIA }).estado;
+  const { estado: despues, cambios } = borrar(estado, 'tomas', estado.tomas[0].id);
+  assert.equal(despues.tomas.length, 1);
+  assert.equal(despues.tomas[0].borrado, true);
+  assert.equal(cambios[0].fila.borrado, true);
+});
+
+test('borrar un proyecto deja lápidas de él y de sus tomas', () => {
+  let estado = agregarToma(conProyecto(), { proyecto: 'p1', queHacer: 'a', dia: DIA }).estado;
+  estado = agregarToma(estado, { proyecto: 'p1', queHacer: 'b', dia: DIA }).estado;
+  const { estado: despues, cambios } = borrar(estado, 'proyectos', 'p1');
+  assert.equal(despues.proyectos[0].borrado, true);
+  assert.deepEqual(despues.tomas.map((t) => t.borrado), [true, true]);
+  assert.equal(cambios.length, 3);
 });

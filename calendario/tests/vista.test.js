@@ -135,3 +135,37 @@ test('un proyecto vacío en modo editar trae su botón de agregar toma', () => {
   const estado = normalizarEstado({ proyectos: [{ id: 'p1', nombre: 'Fortaleza' }] });
   assert.match(tableroHTML(estado, HOY, { editando: true }), /data-accion="nueva-toma"/);
 });
+
+test('el campo del objetivo no lleva el texto de ayuda adentro', () => {
+  // Si el placeholder es un hijo del campo editable, textContent lo arrastra y
+  // termina guardado adelante de lo que escribió Abel.
+  const html = tableroHTML(VACIO, HOY);
+  const campo = html.match(/<p[^>]*data-accion="objetivo"[^>]*>([\s\S]*?)<\/p>/);
+  assert.ok(campo, 'no encontré el campo del objetivo');
+  assert.equal(campo[1].trim(), '');
+  assert.match(html, /data-vacio="Escribí el objetivo del día"/);
+});
+
+test('el campo del objetivo muestra lo escrito cuando hay objetivo', () => {
+  const html = tableroHTML(conProyectos(1), HOY);
+  const campo = html.match(/<p[^>]*data-accion="objetivo"[^>]*>([\s\S]*?)<\/p>/);
+  assert.match(campo[1], /Cerrar los VFX de Fortaleza/);
+});
+
+test('una toma hecha se puede desmarcar desde su chip', () => {
+  const estado = normalizarEstado({
+    proyectos: [{ id: 'p1', nombre: 'Fortaleza' }],
+    tomas: [{ id: 't1', proyecto: 'p1', queHacer: 'track', diaActual: HOY, hecha: true }]
+  });
+  const html = tableroHTML(estado, HOY);
+  assert.match(html, /data-accion="hecha"[^>]*>[\s\S]*?<\/button>[\s\S]*?<s>/);
+  assert.match(html, /data-toma="t1"/);
+});
+
+test('el chip de una toma hecha trae su botón de borrar, oculto', () => {
+  const estado = normalizarEstado({
+    proyectos: [{ id: 'p1', nombre: 'Fortaleza' }],
+    tomas: [{ id: 't1', proyecto: 'p1', queHacer: 'track', diaActual: HOY, hecha: true }]
+  });
+  assert.match(tableroHTML(estado, HOY), /class="oculto[^"]*"[^>]*data-accion="borrar-toma"/);
+});

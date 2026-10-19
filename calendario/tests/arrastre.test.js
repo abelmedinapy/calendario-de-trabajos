@@ -81,3 +81,15 @@ test('diasConTrabajo solo devuelve días de los que le pidieron', () => {
   const estado = conTomas({ diaOrigen: '2026-10-01', diaActual: '2026-10-01' });
   assert.deepEqual([...diasConTrabajo(estado, [HOY])], []);
 });
+
+test('una toma borrada no se arrastra ni revive', () => {
+  const { estado, movidas } = arrastrar(
+    conTomas({ diaOrigen: '2026-10-17', diaActual: '2026-10-17', borrado: true }), HOY);
+  assert.deepEqual(movidas, []);
+  assert.equal(estado.tomas[0].diaActual, '2026-10-17');
+});
+
+test('diasConTrabajo no cuenta lo borrado', () => {
+  const estado = conTomas({ diaOrigen: '2026-10-15', diaActual: '2026-10-15', borrado: true });
+  assert.deepEqual([...diasConTrabajo(estado, ['2026-10-15'])], []);
+});

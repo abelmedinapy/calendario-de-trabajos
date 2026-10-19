@@ -15,6 +15,7 @@ function proyecto(crudo) {
     etiqueta: texto(crudo.etiqueta),
     color: COLORES.includes(crudo.color) ? crudo.color : 'acid',
     archivado: siNo(crudo.archivado),
+    borrado: siNo(crudo.borrado),
     actualizado: texto(crudo.actualizado)
   };
 }
@@ -34,6 +35,7 @@ function toma(crudo) {
     grafico: nulo(crudo.grafico),
     graficoValores: crudo.graficoValores ?? null,
     orden: Number.isFinite(crudo.orden) ? crudo.orden : 0,
+    borrado: siNo(crudo.borrado),
     actualizado: texto(crudo.actualizado)
   };
 }
@@ -43,18 +45,22 @@ function dia(crudo) {
     fecha: texto(crudo.fecha),
     objetivo: texto(crudo.objetivo),
     renderDice: texto(crudo.renderDice),
+    borrado: siNo(crudo.borrado),
     actualizado: texto(crudo.actualizado)
   };
 }
 
-const conId = (fila) => fila && typeof fila === 'object';
+// Una fila sin clave no es una fila: al fusionar, todas las que no tienen id
+// colapsarían en una sola.
+const tieneClave = (clave) => (fila) =>
+  fila && typeof fila === 'object' && typeof fila[clave] === 'string' && fila[clave] !== '';
 
 export function normalizarEstado(crudo) {
   const fuente = crudo && typeof crudo === 'object' ? crudo : {};
   return {
-    proyectos: lista(fuente.proyectos).filter(conId).map(proyecto),
-    tomas: lista(fuente.tomas).filter(conId).map(toma),
-    dias: lista(fuente.dias).filter(conId).map(dia)
+    proyectos: lista(fuente.proyectos).filter(tieneClave('id')).map(proyecto),
+    tomas: lista(fuente.tomas).filter(tieneClave('id')).map(toma),
+    dias: lista(fuente.dias).filter(tieneClave('fecha')).map(dia)
   };
 }
 
@@ -67,9 +73,9 @@ function porOrden(a, b) {
 export function agruparPorProyecto(estado, fecha, { incluirVacios = false } = {}) {
   const grupos = [];
   for (const p of estado.proyectos) {
-    if (p.archivado) continue;
+    if (p.archivado || p.borrado) continue;
     const suyas = estado.tomas
-      .filter((t) => t.proyecto === p.id && t.diaActual === fecha)
+      .filter((t) => !t.borrado && t.proyecto === p.id && t.diaActual === fecha)
       .sort(porOrden);
     if (suyas.length === 0 && !incluirVacios) continue;
     grupos.push({
@@ -81,10 +87,13 @@ export function agruparPorProyecto(estado, fecha, { incluirVacios = false } = {}
   return grupos;
 }
 
+// Los contadores salen de lo que el tablero muestra, no de las filas sueltas:
+// una toma de un proyecto borrado no está a la vista y no se cuenta.
 export function contadores(estado, fecha) {
-  const delDia = estado.tomas.filter((t) => t.diaActual === fecha);
+  const grupos = agruparPorProyecto(estado, fecha);
+  const delDia = grupos.flatMap((g) => [...g.hechas, ...g.pendientes]);
   return {
-    proyectos: agruparPorProyecto(estado, fecha).length,
+    proyectos: grupos.length,
     tomas: delDia.length,
     listas: delDia.filter((t) => t.hecha).length
   };

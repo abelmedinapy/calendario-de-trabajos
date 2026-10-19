@@ -24,9 +24,12 @@ export function crearNube({ llave, traer = fetch }) {
     },
 
     async subirCambios(cambios) {
-      if (cambios.length === 0) return [];
+      if (cambios.length === 0) return { aplicados: [], rechazados: [] };
       const r = await pedir('/cambios', { method: 'POST', body: JSON.stringify(cambios) });
-      return Array.isArray(r.aplicados) ? r.aplicados : [];
+      return {
+        aplicados: Array.isArray(r.aplicados) ? r.aplicados : [],
+        rechazados: Array.isArray(r.rechazados) ? r.rechazados : []
+      };
     }
   };
 }

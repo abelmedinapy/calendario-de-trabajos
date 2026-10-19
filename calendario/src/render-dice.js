@@ -6,12 +6,12 @@ export function loQueDiceRender(estado, fecha) {
   if (delDia && delDia.renderDice) return delDia.renderDice;
 
   const arrastradas = estado.tomas.filter(
-    (t) => !t.hecha && t.diaActual === fecha && t.diaOrigen < fecha);
+    (t) => !t.borrado && !t.hecha && t.diaActual === fecha && t.diaOrigen < fecha);
 
   if (arrastradas.length === 0) {
     const huboPasado =
-      estado.tomas.some((t) => t.diaOrigen < fecha) ||
-      estado.dias.some((d) => d.fecha < fecha);
+      estado.tomas.some((t) => !t.borrado && t.diaOrigen < fecha) ||
+      estado.dias.some((d) => !d.borrado && d.fecha < fecha);
     return huboPasado ? 'Ayer cerraste todo. Arrancamos limpio.' : 'Anotá lo primero del día.';
   }
 

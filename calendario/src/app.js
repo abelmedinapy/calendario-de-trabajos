@@ -43,6 +43,8 @@ function arrancar() {
   let estado = almacen.leerEstado();
   let dia = hoy();
   let editando = false;
+  let sinSubir = 0;
+  let rechazados = [];
 
   const guardar = (nuevo, cambios) => {
     estado = nuevo;
@@ -56,23 +58,53 @@ function arrancar() {
 
   async function subir() {
     if (!llave) return;
-    const { estado: fusionado, subio } = await sincronizar({ almacen, nube: nube() });
-    if (subio) {
-      estado = fusionado;
-      dibujar();
-    }
+    const resultado = await sincronizar({ almacen, nube: nube() });
+    sinSubir = resultado.subio ? 0 : almacen.cola().length;
+    if (resultado.rechazados.length) rechazados = resultado.rechazados;
+    if (resultado.subio) estado = resultado.estado;
+    dibujar();
   }
 
-  function avisoDeGuardado() {
-    return almacen.puedeGuardar()
-      ? ''
-      : `<p class="aviso">Este navegador no deja guardar nada acá. Lo que anotes va directo a la nube; si se corta, se pierde.</p>`;
+  function avisos() {
+    const lineas = [];
+    if (!almacen.puedeGuardar()) {
+      lineas.push('Este navegador no guarda nada en el aparato. Lo que anotes se sube a la nube, pero si cerrás la pestaña antes de que suba, se pierde.');
+    }
+    if (sinSubir > 0) {
+      lineas.push(sinSubir === 1
+        ? 'Hay 1 cambio sin subir. Lo intento de nuevo solo.'
+        : `Hay ${sinSubir} cambios sin subir. Lo intento de nuevo solo.`);
+    }
+    if (rechazados.length) {
+      lineas.push(rechazados.length === 1
+        ? 'Un cambio no se pudo guardar en la nube y lo descarté.'
+        : `${rechazados.length} cambios no se pudieron guardar en la nube y los descarté.`);
+    }
+    return lineas.map((l) => `<p class="aviso">${l}</p>`).join('');
   }
+
+  // Redibujar mientras Abel escribe el objetivo le destruye el campo debajo del
+  // cursor y se lleva puesto lo que estaba tecleando. Se espera a que salga.
+  const escribiendoElObjetivo = () =>
+    Boolean(document.activeElement?.closest?.('[data-accion="objetivo"]'));
+
+  let quedoPorDibujar = false;
 
   function dibujar() {
-    raiz.innerHTML = avisoDeGuardado() + tableroHTML(estado, dia, { editando });
+    if (escribiendoElObjetivo()) {
+      quedoPorDibujar = true;
+      return;
+    }
+    quedoPorDibujar = false;
+    raiz.innerHTML = avisos() + tableroHTML(estado, dia, { editando });
     raiz.classList.toggle('editando', editando);
   }
+
+  raiz.addEventListener('focusout', (evento) => {
+    if (evento.target.closest?.('[data-accion="objetivo"]') && quedoPorDibujar) {
+      setTimeout(dibujar, 0);
+    }
+  });
 
   function pantallaDeEntrada(modo) {
     raiz.innerHTML = modo === 'sin-nada'
@@ -193,6 +225,20 @@ function arrancar() {
   else pantallaDeEntrada(modo);
 
   window.addEventListener('online', subir);
+
+  // Una PWA instalada en el celu casi nunca se cierra: al volver a mirarla hay
+  // que traer lo que se anotó en la Mac, y si cruzó las 5 de la mañana, empezar
+  // el día nuevo con lo pendiente arrastrado.
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState !== 'visible') return;
+    const ahora = hoy();
+    if (ahora !== dia) {
+      dia = ahora;
+      empezar();
+    } else {
+      subir();
+    }
+  });
 
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('./sw.js', { type: 'module' }).catch(() => {

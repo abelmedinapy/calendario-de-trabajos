@@ -22,17 +22,38 @@ export function fusionar(local, remoto) {
   };
 }
 
-export async function sincronizar({ almacen, nube }) {
-  const local = almacen.leerEstado();
-  if (!nube.hayLlave()) return { estado: local, subio: false };
+// Una sola sincronización en vuelo. Con varias a la vez, la que terminaba
+// última guardaba su foto vieja de lo local y hacía desaparecer de la pantalla
+// lo que se había anotado en el medio.
+let enVuelo = null;
+
+async function unaVuelta({ almacen, nube }) {
+  if (!nube.hayLlave()) {
+    return { estado: almacen.leerEstado(), subio: false, rechazados: [] };
+  }
 
   try {
-    const aplicados = await nube.subirCambios(almacen.cola());
-    almacen.sacarDeLaCola(aplicados);
-    const estado = fusionar(local, await nube.bajarEstado());
+    const respuesta = await nube.subirCambios(almacen.cola());
+    // La nube vieja devolvía solo la lista de aplicados.
+    const aplicados = Array.isArray(respuesta) ? respuesta : (respuesta.aplicados ?? []);
+    const rechazados = Array.isArray(respuesta) ? [] : (respuesta.rechazados ?? []);
+    // Los rechazados también salen: reintentarlos taponaba la cola para siempre.
+    almacen.sacarDeLaCola([...aplicados, ...rechazados.map((r) => r.id)]);
+
+    const remoto = await nube.bajarEstado();
+    // Se relee: mientras el pedido viajaba, Abel pudo haber escrito algo más.
+    const estado = fusionar(almacen.leerEstado(), remoto);
     almacen.guardarEstado(estado);
-    return { estado, subio: true };
+    return { estado, subio: true, rechazados };
   } catch {
-    return { estado: local, subio: false };
+    return { estado: almacen.leerEstado(), subio: false, rechazados: [] };
   }
+}
+
+export function sincronizar({ almacen, nube }) {
+  const siguiente = Promise.resolve(enVuelo)
+    .catch(() => {})
+    .then(() => unaVuelta({ almacen, nube }));
+  enVuelo = siguiente.catch(() => {});
+  return siguiente;
 }

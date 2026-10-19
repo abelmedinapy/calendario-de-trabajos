@@ -2,8 +2,10 @@
 // la nube va atrás, leyendo la cola.
 //
 // En una ventana privada o con la cuota llena el storage tira al leer y al
-// escribir. La app tiene que abrir igual, así que todo va dentro de un try y
-// `puedeGuardar()` dice la verdad para poder avisarle a Abel.
+// escribir. Entonces el almacén se queda con una copia en memoria: dura lo que
+// dure la pestaña, pero alcanza para que la cola llegue a la nube en vez de
+// perderse en silencio. `puedeGuardar()` sigue diciendo la verdad para poder
+// avisarle a Abel que en ese navegador no queda nada guardado.
 
 import { normalizarEstado } from './modelo.js';
 
@@ -12,18 +14,22 @@ const CLAVE_COLA = 'calendario:cola';
 
 export function crearAlmacen(storage) {
   let sirve = Boolean(storage);
+  const memoria = new Map();
 
   function leer(clave) {
-    if (!storage) return null;
-    try {
-      return storage.getItem(clave);
-    } catch {
-      sirve = false;
-      return null;
+    if (storage) {
+      try {
+        const valor = storage.getItem(clave);
+        if (valor !== null) return valor;
+      } catch {
+        sirve = false;
+      }
     }
+    return memoria.has(clave) ? memoria.get(clave) : null;
   }
 
   function escribir(clave, valor) {
+    memoria.set(clave, valor);
     if (!storage) return false;
     try {
       storage.setItem(clave, valor);

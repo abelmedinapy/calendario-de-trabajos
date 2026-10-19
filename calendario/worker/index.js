@@ -1,9 +1,10 @@
 // La API del calendario. Sirve dos rutas y nada más; los archivos de la app
 // los sirve Cloudflare antes de llegar acá.
 
-import { aFila, deFila, claveDe, columnasDe } from '../src/filas.js';
-
-const TABLAS = ['proyectos', 'tomas', 'dias'];
+import { deFila } from '../src/filas.js';
+import {
+  TABLAS, sentenciaDeAlta, valoresDe, hayQueApagarEnCurso, cambioValido
+} from '../src/sentencias.js';
 
 const json = (cuerpo, estado = 200) =>
   new Response(JSON.stringify(cuerpo), {
@@ -25,18 +26,6 @@ async function llaveCorrecta(pedido, secreto) {
   return crypto.subtle.timingSafeEqual(a, b);
 }
 
-function sentenciaDeAlta(tabla) {
-  const columnas = columnasDe(tabla);
-  const clave = claveDe(tabla);
-  const huecos = columnas.map(() => '?').join(', ');
-  const actualiza = columnas
-    .filter((c) => c !== clave)
-    .map((c) => `${c} = excluded.${c}`)
-    .join(', ');
-  return `INSERT INTO ${tabla} (${columnas.join(', ')}) VALUES (${huecos})
-          ON CONFLICT(${clave}) DO UPDATE SET ${actualiza}`;
-}
-
 async function estado(db) {
   const leidas = await db.batch(TABLAS.map((t) => db.prepare(`SELECT * FROM ${t}`)));
   return Object.fromEntries(
@@ -44,25 +33,37 @@ async function estado(db) {
   );
 }
 
-function sentenciasDe(db, cambios) {
-  const sentencias = [];
-  // El índice único deja una sola toma en curso: apagamos todas antes de
-  // encender la nueva, si no la escritura choca contra el índice.
-  if (cambios.some((c) => c.tabla === 'tomas' && !c.borrado && c.fila?.enCurso)) {
-    sentencias.push(db.prepare('UPDATE tomas SET en_curso = 0 WHERE en_curso = 1'));
-  }
-  for (const cambio of cambios) {
-    const { tabla, fila, borrado } = cambio;
-    if (!TABLAS.includes(tabla)) continue;
-    const clave = claveDe(tabla);
-    if (borrado) {
-      sentencias.push(db.prepare(`DELETE FROM ${tabla} WHERE ${clave} = ?`).bind(fila[clave === 'fecha' ? 'fecha' : 'id']));
-    } else {
-      const valores = aFila(tabla, fila);
-      sentencias.push(db.prepare(sentenciaDeAlta(tabla)).bind(...columnasDe(tabla).map((c) => valores[c])));
+// Uno por uno y no en un solo batch: así un cambio que la base rechaza se
+// informa por su nombre en vez de hacer fracasar a todos, que es como la cola
+// del cliente quedaba taponada reintentando lo mismo para siempre.
+async function aplicar(db, cambios) {
+  const aplicados = [];
+  const rechazados = [];
+
+  if (hayQueApagarEnCurso(cambios)) {
+    try {
+      await db.prepare('UPDATE tomas SET en_curso = 0 WHERE en_curso = 1').run();
+    } catch {
+      // si falla, el alta de abajo va a chocar contra el índice y se informa ahí
     }
   }
-  return sentencias;
+
+  for (const cambio of cambios) {
+    if (!cambioValido(cambio)) {
+      rechazados.push({ id: cambio?.id ?? null, motivo: 'cambio mal formado' });
+      continue;
+    }
+    try {
+      await db.prepare(sentenciaDeAlta(cambio.tabla))
+        .bind(...valoresDe(cambio.tabla, cambio.fila))
+        .run();
+      aplicados.push(cambio.id);
+    } catch (error) {
+      rechazados.push({ id: cambio.id, motivo: String(error?.message || error) });
+    }
+  }
+
+  return { aplicados, rechazados };
 }
 
 export default {
@@ -81,11 +82,7 @@ export default {
     if (ruta === '/api/cambios' && pedido.method === 'POST') {
       const cambios = await pedido.json().catch(() => null);
       if (!Array.isArray(cambios)) return json({ error: 'cambios' }, 400);
-      if (cambios.length === 0) return json({ aplicados: [] });
-      const sentencias = sentenciasDe(env.DB, cambios);
-      if (sentencias.length === 0) return json({ aplicados: [] });
-      await env.DB.batch(sentencias);
-      return json({ aplicados: cambios.map((c) => c.id) });
+      return json(await aplicar(env.DB, cambios));
     }
 
     return json({ error: 'ruta' }, 404);

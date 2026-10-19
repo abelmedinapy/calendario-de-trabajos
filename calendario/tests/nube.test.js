@@ -33,6 +33,12 @@ test('bajarEstado normaliza lo que viene de la red', async () => {
   assert.equal(estado.tomas[0].hecha, false);
 });
 
+test('subirCambios devuelve también lo que la nube rechazó', async () => {
+  const traer = traerFalso([{ estado: 200, cuerpo: { aplicados: [], rechazados: [{ id: 'c1', motivo: 'mal formado' }] } }]);
+  const r = await crearNube({ llave: 'secreta', traer }).subirCambios([{ id: 'c1', tabla: 'tomas', fila: {} }]);
+  assert.deepEqual(r.rechazados, [{ id: 'c1', motivo: 'mal formado' }]);
+});
+
 test('un 401 avisa que la llave no sirve', async () => {
   const traer = traerFalso([{ estado: 401, cuerpo: { error: 'llave' } }]);
   await assert.rejects(crearNube({ llave: 'mala', traer }).bajarEstado(), /llave/);
@@ -40,15 +46,15 @@ test('un 401 avisa que la llave no sirve', async () => {
 
 test('subirCambios devuelve los ids que la nube confirmó', async () => {
   const traer = traerFalso([{ estado: 200, cuerpo: { aplicados: ['c1'] } }]);
-  const ids = await crearNube({ llave: 'secreta', traer })
-    .subirCambios([{ id: 'c1', tabla: 'tomas', fila: {}, borrado: false }]);
-  assert.deepEqual(ids, ['c1']);
+  const r = await crearNube({ llave: 'secreta', traer })
+    .subirCambios([{ id: 'c1', tabla: 'tomas', fila: {} }]);
+  assert.deepEqual(r.aplicados, ['c1']);
   assert.equal(traer.pedidos[0].opciones.method, 'POST');
 });
 
 test('subirCambios sin cambios no toca la red', async () => {
   const traer = traerFalso([]);
-  assert.deepEqual(await crearNube({ llave: 'secreta', traer }).subirCambios([]), []);
+  assert.deepEqual(await crearNube({ llave: 'secreta', traer }).subirCambios([]), { aplicados: [], rechazados: [] });
   assert.equal(traer.pedidos.length, 0);
 });
 

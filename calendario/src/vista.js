@@ -63,7 +63,9 @@ export function tarjetaHTML(toma) {
 function chipHTML(toma) {
   const codigo = toma.codigo ? `${escapar(toma.codigo)} · ` : '';
   return `<span class="chip" data-toma="${escapar(toma.id)}">
-    <b>✓</b><s>${codigo}${escapar(toma.queHacer)}</s></span>`;
+    <button class="marca" data-accion="hecha" aria-label="Volver a pendiente">✓</button>
+    <s>${codigo}${escapar(toma.queHacer)}</s>
+    <button class="oculto borrar chico" data-accion="borrar-toma" aria-label="Borrar la toma">×</button></span>`;
 }
 
 function columnaHTML(grupo) {
@@ -100,9 +102,9 @@ export function tableroHTML(estado, fecha, { editando = false } = {}) {
   const n = contadores(estado, fecha);
   const delDia = estado.dias.find((d) => d.fecha === fecha);
 
-  const objetivo = delDia && delDia.objetivo
-    ? escapar(delDia.objetivo)
-    : '<span class="vacio">Escribí el objetivo del día</span>';
+  // El texto de ayuda va en un atributo y lo dibuja el CSS: adentro del campo
+  // editable, `textContent` se lo llevaría puesto al guardar.
+  const objetivo = delDia && delDia.objetivo ? escapar(delDia.objetivo) : '';
 
   const aviso = grupos.length >= DEMASIADOS
     ? `<p class="aviso">Son seis proyectos en un día. Entran, pero la captura se achica.</p>`
@@ -126,7 +128,8 @@ export function tableroHTML(estado, fecha, { editando = false } = {}) {
     </div>
     <div class="goal">
       <div class="lbl">Objetivo del día</div>
-      <p contenteditable="true" data-accion="objetivo">${objetivo}</p>
+      <p contenteditable="plaintext-only" data-accion="objetivo"
+         data-vacio="Escribí el objetivo del día">${objetivo}</p>
     </div>
     <div class="stats">
       <div class="stat"><span class="lbl">Proyectos</span><i>${n.proyectos}</i></div>

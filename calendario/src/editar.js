@@ -11,11 +11,10 @@ const nuevoId = () => (globalThis.crypto?.randomUUID
 
 const nada = (estado) => ({ estado, cambios: [] });
 
-const cambioDe = (tabla, fila, borrado = false) => ({
+const cambioDe = (tabla, fila) => ({
   id: tabla === 'dias' ? fila.fecha : fila.id,
   tabla,
-  fila,
-  borrado
+  fila
 });
 
 export function agregarProyecto(estado, { nombre, etiqueta = '', color } = {}) {
@@ -27,6 +26,7 @@ export function agregarProyecto(estado, { nombre, etiqueta = '', color } = {}) {
     etiqueta: etiqueta.trim(),
     color: COLORES.includes(color) ? color : COLORES[estado.proyectos.length % COLORES.length],
     archivado: false,
+    borrado: false,
     actualizado: ahora()
   };
   return {
@@ -50,6 +50,7 @@ export function agregarToma(estado, { proyecto, codigo = '', queHacer, detalle =
     hecha: false,
     diaHecha: null,
     enCurso: false,
+    borrado: false,
     grafico: null,
     graficoValores: null,
     orden: hermanas.length ? Math.max(...hermanas.map((t) => t.orden)) + 1 : 0,
@@ -97,6 +98,7 @@ export function ponerObjetivo(estado, fecha, texto) {
     fecha,
     objetivo: (texto || '').trim(),
     renderDice: viejo ? viejo.renderDice : '',
+    borrado: false,
     actualizado: ahora()
   };
   return {
@@ -110,30 +112,39 @@ export function ponerObjetivo(estado, fecha, texto) {
   };
 }
 
+// Borrar deja una lápida en vez de sacar la fila: si la fila desapareciera, el
+// otro aparato la volvería a subir en la próxima fusión, y al día siguiente el
+// arrastre la revivía. La lápida viaja como un cambio más y gana por fecha.
 export function borrar(estado, tabla, id) {
+  const sello = ahora();
+  const enterrar = (fila) => ({ ...fila, borrado: true, enCurso: false, actualizado: sello });
+
   if (tabla === 'proyectos') {
-    const proyecto = estado.proyectos.find((p) => p.id === id);
+    const proyecto = estado.proyectos.find((p) => p.id === id && !p.borrado);
     if (!proyecto) return nada(estado);
-    const suyas = estado.tomas.filter((t) => t.proyecto === id);
+    const suyas = estado.tomas.filter((t) => t.proyecto === id && !t.borrado);
+    const lapidas = suyas.map(enterrar);
+    const lapidaDelProyecto = enterrar(proyecto);
     return {
       estado: {
         ...estado,
-        proyectos: estado.proyectos.filter((p) => p.id !== id),
-        tomas: estado.tomas.filter((t) => t.proyecto !== id)
+        proyectos: estado.proyectos.map((p) => (p.id === id ? lapidaDelProyecto : p)),
+        tomas: estado.tomas.map((t) => lapidas.find((l) => l.id === t.id) || t)
       },
       cambios: [
-        ...suyas.map((t) => cambioDe('tomas', t, true)),
-        cambioDe('proyectos', proyecto, true)
+        ...lapidas.map((t) => cambioDe('tomas', t)),
+        cambioDe('proyectos', lapidaDelProyecto)
       ]
     };
   }
 
   if (tabla === 'tomas') {
-    const toma = estado.tomas.find((t) => t.id === id);
+    const toma = estado.tomas.find((t) => t.id === id && !t.borrado);
     if (!toma) return nada(estado);
+    const lapida = enterrar(toma);
     return {
-      estado: { ...estado, tomas: estado.tomas.filter((t) => t.id !== id) },
-      cambios: [cambioDe('tomas', toma, true)]
+      estado: { ...estado, tomas: estado.tomas.map((t) => (t.id === id ? lapida : t)) },
+      cambios: [cambioDe('tomas', lapida)]
     };
   }
 

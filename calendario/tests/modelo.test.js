@@ -106,7 +106,7 @@ test('marcarEnCurso sobre una toma hecha no la enciende', () => {
 test('una toma normalizada tiene todos los campos del modelo', () => {
   const t = toma('t1', 'p1');
   assert.deepEqual(Object.keys(t).sort(), [
-    'actualizado', 'codigo', 'detalle', 'diaActual', 'diaHecha', 'diaOrigen',
+    'actualizado', 'borrado', 'codigo', 'detalle', 'diaActual', 'diaHecha', 'diaOrigen',
     'enCurso', 'grafico', 'graficoValores', 'hecha', 'id', 'orden', 'proyecto', 'queHacer'
   ]);
 });
@@ -124,4 +124,29 @@ test('ni con incluirVacios aparecen los archivados', () => {
 
 test('contadores no cuenta los proyectos vacíos', () => {
   assert.equal(contadores(estadoDeEjemplo(), DIA).proyectos, 3);
+});
+
+test('normalizarEstado descarta las filas sin id: todas colapsarían en una al fusionar', () => {
+  const e = normalizarEstado({
+    proyectos: [{ nombre: 'sin id' }, { id: 'p1', nombre: 'Fortaleza' }],
+    tomas: [{ proyecto: 'p1', queHacer: 'sin id' }],
+    dias: [{ objetivo: 'sin fecha' }]
+  });
+  assert.deepEqual(e.proyectos.map((p) => p.id), ['p1']);
+  assert.deepEqual(e.tomas, []);
+  assert.deepEqual(e.dias, []);
+});
+
+test('lo borrado no se ve ni se cuenta', () => {
+  const e = normalizarEstado({
+    proyectos: [{ id: 'p1', nombre: 'Fortaleza' }, { id: 'p2', nombre: 'Borrado', borrado: true }],
+    tomas: [
+      { id: 't1', proyecto: 'p1', queHacer: 'a', diaActual: DIA },
+      { id: 't2', proyecto: 'p1', queHacer: 'b', diaActual: DIA, borrado: true },
+      { id: 't3', proyecto: 'p2', queHacer: 'c', diaActual: DIA }
+    ]
+  });
+  assert.deepEqual(agruparPorProyecto(e, DIA).map((g) => g.proyecto.id), ['p1']);
+  assert.deepEqual(agruparPorProyecto(e, DIA)[0].pendientes.map((t) => t.id), ['t1']);
+  assert.deepEqual(contadores(e, DIA), { proyectos: 1, tomas: 1, listas: 0 });
 });

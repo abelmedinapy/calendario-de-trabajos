@@ -75,11 +75,11 @@ test('si el storage tira al leer, leerEstado devuelve el estado vacío', () => {
   assert.deepEqual(crearAlmacen(roto).leerEstado(), VACIO);
 });
 
-test('si el storage tira, encolar no explota y la cola queda vacía', () => {
+test('si el storage tira, encolar no explota y el cambio no se pierde', () => {
   const roto = { getItem: () => { throw new Error('bloqueado'); }, setItem: () => { throw new Error('lleno'); } };
   const a = crearAlmacen(roto);
   a.encolar(cambio('c1'));
-  assert.deepEqual(a.cola(), []);
+  assert.deepEqual(a.cola().map((c) => c.id), ['c1']);
 });
 
 test('sin storage del todo el almacén igual funciona', () => {
@@ -91,4 +91,31 @@ test('sin storage del todo el almacén igual funciona', () => {
 
 test('puedeGuardar es true mientras el storage responda', () => {
   assert.equal(crearAlmacen(storageFalso()).puedeGuardar(), true);
+});
+
+test('con el storage roto el almacén igual recuerda dentro de la pestaña', () => {
+  // Sin esto, en una ventana privada no se guarda ni local ni en la nube: la
+  // cola también vive en el storage, así que el cambio se perdía en silencio.
+  const roto = { getItem: () => { throw new Error('bloqueado'); }, setItem: () => { throw new Error('lleno'); } };
+  const a = crearAlmacen(roto);
+  const estado = estadoDeEjemplo();
+  a.guardarEstado(estado);
+  assert.deepEqual(a.leerEstado(), estado);
+  a.encolar(cambio('c1'));
+  assert.deepEqual(a.cola().map((c) => c.id), ['c1']);
+  a.sacarDeLaCola(['c1']);
+  assert.deepEqual(a.cola(), []);
+});
+
+test('con el storage roto puedeGuardar sigue diciendo que no', () => {
+  const roto = { getItem: () => { throw new Error('x'); }, setItem: () => { throw new Error('x'); } };
+  const a = crearAlmacen(roto);
+  a.guardarEstado(estadoDeEjemplo());
+  assert.equal(a.puedeGuardar(), false);
+});
+
+test('sin storage del todo también recuerda dentro de la pestaña', () => {
+  const a = crearAlmacen(null);
+  a.encolar(cambio('c1'));
+  assert.deepEqual(a.cola().map((c) => c.id), ['c1']);
 });

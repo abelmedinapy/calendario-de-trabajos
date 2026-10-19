@@ -121,3 +121,56 @@ test('sincronizar guarda localmente lo que fusionó', async () => {
   assert.deepEqual(estado.tomas.map((t) => t.id).sort(), ['t1', 't2']);
   assert.deepEqual(almacen.loGuardado, estado);
 });
+
+test('sincronizar relee lo local después de subir: no pisa lo que se escribió mientras viajaba', async () => {
+  const almacen = almacenFalso(estadoCon([toma('t1', 'a')]));
+  const nube = {
+    hayLlave: () => true,
+    subirCambios: async () => {
+      // mientras el pedido viaja, Abel agrega otra toma
+      almacen.guardarEstado(estadoCon([toma('t1', 'a'), toma('t2', 'b')]));
+      return [];
+    },
+    bajarEstado: async () => estadoCon([toma('t1', 'a')])
+  };
+  const { estado } = await sincronizar({ almacen, nube });
+  assert.deepEqual(estado.tomas.map((t) => t.id).sort(), ['t1', 't2']);
+});
+
+test('los cambios que la nube rechaza salen de la cola y se informan', async () => {
+  const almacen = almacenFalso(estadoCon([]), [
+    { id: 'c1', tabla: 'tomas', fila: toma('t1', 'a') },
+    { id: 'c2', tabla: 'tomas', fila: { roto: true } }
+  ]);
+  const nube = {
+    hayLlave: () => true,
+    subirCambios: async () => ({ aplicados: ['c1'], rechazados: [{ id: 'c2', motivo: 'mal formado' }] }),
+    bajarEstado: async () => estadoCon([])
+  };
+  const { rechazados } = await sincronizar({ almacen, nube });
+  assert.deepEqual(almacen.cola(), []);
+  assert.deepEqual(rechazados.map((r) => r.id), ['c2']);
+});
+
+test('dos sincronizaciones a la vez no se pisan: la segunda espera', async () => {
+  const almacen = almacenFalso(estadoCon([toma('t1', 'a')]));
+  let enVuelo = 0;
+  let maximo = 0;
+  const nube = {
+    hayLlave: () => true,
+    subirCambios: async () => {
+      enVuelo += 1;
+      maximo = Math.max(maximo, enVuelo);
+      await new Promise((r) => setTimeout(r, 20));
+      enVuelo -= 1;
+      return [];
+    },
+    bajarEstado: async () => estadoCon([toma('t1', 'a')])
+  };
+  await Promise.all([
+    sincronizar({ almacen, nube }),
+    sincronizar({ almacen, nube }),
+    sincronizar({ almacen, nube })
+  ]);
+  assert.equal(maximo, 1);
+});
