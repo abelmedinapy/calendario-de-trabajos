@@ -508,3 +508,18 @@ test('AM anda con tres mini AM alrededor', () => {
   const html = tableroHTML(conProyectos(1), HOY);
   assert.equal(cuantos(html, /class="mini suelto"/g), 3);
 });
+
+test('el proyecto en pausa tiene su mini AM dormido con zetas', () => {
+  const estado = normalizarEstado({
+    proyectos: [{ id: 'p1', nombre: 'Munich', pausado: true }],
+    tomas: [{ id: 't1', proyecto: 'p1', queHacer: 'a', diaActual: HOY }]
+  });
+  const html = tableroHTML(estado, HOY);
+  assert.match(html, /class="dormido"/);
+  assert.match(html, /class="mini" data-cara="0"/);
+  assert.equal(cuantos(html, /class="z"/g), 3);
+});
+
+test('el que no está en pausa no duerme', () => {
+  assert.doesNotMatch(tableroHTML(conProyectos(1), HOY), /class="dormido"/);
+});

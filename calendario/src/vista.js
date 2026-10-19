@@ -122,11 +122,16 @@ function columnaHTML(grupo, editando, desdeCara = 0, hoy = hoyReal()) {
   const escribible = (campo, vacio) =>
     ` contenteditable="plaintext-only" data-campo="${campo}" data-vacio="${escapar(vacio)}"`;
   const etiqueta = (grupo.proyecto.etiqueta || editando)
-    ? `<span${escribible('etiqueta', 'VFX, Spot…')}>${escapar(grupo.proyecto.etiqueta)}</span>` : '';
+    ? `<span class="etq"${escribible('etiqueta', 'VFX, Spot…')}>${escapar(grupo.proyecto.etiqueta)}</span>` : '';
   const chips = grupo.hechas.length
     ? `<div class="chips">${grupo.hechas.map((t, i) => chipHTML(t, desdeCara + i)).join('')}</div>` : '';
+  // El mini con los ojos cerrados y las zetas: se entiende sin leer.
   const pausa = grupo.proyecto.pausado
-    ? '<span class="pausa">EN PAUSA</span>' : '';
+    ? `<span class="dormido" aria-hidden="true">
+         <span class="mini" data-cara="0"></span>
+         <span class="z">Z</span><span class="z">Z</span><span class="z">Z</span>
+       </span><span class="pausa">EN PAUSA</span>`
+    : '';
   return `<div class="col ${escapar(grupo.proyecto.color)}${grupo.proyecto.pausado ? ' pausado' : ''}" data-proyecto="${escapar(grupo.proyecto.id)}">
     <span class="node"></span>
     <div class="elbow"></div>

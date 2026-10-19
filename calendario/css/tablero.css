@@ -175,7 +175,8 @@ body{
 .mini.suelto:nth-of-type(3){right:22px;bottom:34px;width:10px;height:12px;opacity:.75;animation-delay:-3.9s;animation-duration:7.4s}
 
 @media (prefers-reduced-motion:reduce){
-  .am img,.mini.suelto{animation:none}
+  .am img,.mini.suelto,.pausa,.dormido .z{animation:none}
+  .dormido .z{opacity:.9}
 }
 
 /* ---------- el riel ---------- */
@@ -211,7 +212,7 @@ body{
   font-size:21px;font-weight:500;letter-spacing:-.01em;
   overflow-wrap:anywhere;
 }
-.pname span{
+.pname .etq{
   font-size:11.5px;color:var(--dim);background:var(--ink2);border:1px solid var(--line);
   border-radius:999px;padding:3px 9px;overflow-wrap:anywhere;min-width:0;
 }
@@ -268,10 +269,33 @@ body{
 /* La píldora de pausa es el aviso del tablero: va rellena, no delineada, para
    que se lea de un vistazo y en una captura. */
 .pausa{
-  font-size:12.5px;font-weight:700;letter-spacing:.12em;
+  font-size:13px;font-weight:800;letter-spacing:.14em;
   color:#1B1200;background:var(--warn);border-radius:999px;
-  padding:5px 14px;white-space:nowrap;
-  box-shadow:0 0 0 4px color-mix(in oklab,var(--warn) 25%,transparent);
+  padding:6px 16px;white-space:nowrap;
+  box-shadow:0 0 0 5px color-mix(in oklab,var(--warn) 28%,transparent);
+  animation:respira 3.4s ease-in-out infinite;
+}
+
+@keyframes respira{
+  0%,100%{box-shadow:0 0 0 5px color-mix(in oklab,var(--warn) 28%,transparent)}
+  50%{box-shadow:0 0 0 9px color-mix(in oklab,var(--warn) 10%,transparent)}
+}
+
+/* El mini dormido al lado del cartel, con sus zetas subiendo. */
+.dormido{position:relative;display:inline-block;width:26px;height:26px;flex:none}
+.dormido .mini{width:24px;height:27px;position:absolute;bottom:-2px;left:0}
+.dormido .z{
+  position:absolute;left:17px;bottom:16px;
+  font-size:10px;font-weight:700;color:var(--warn);
+  opacity:0;animation:zeta 3.6s ease-out infinite;
+}
+.dormido .z:nth-of-type(2){animation-delay:1.2s}
+.dormido .z:nth-of-type(3){animation-delay:2.4s}
+
+@keyframes zeta{
+  0%{opacity:0;transform:translate(0,0) scale(.7)}
+  18%{opacity:.95}
+  100%{opacity:0;transform:translate(9px,-18px) scale(1.25)}
 }
 
 /* ---------- tarjetas ---------- */
