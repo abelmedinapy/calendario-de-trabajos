@@ -4,9 +4,9 @@
 
 **Goal:** Una PWA de una sola pantalla que muestra en qué va a trabajar Abel hoy, igual en la Mac, la PC y el celu, instalable y usable sin internet.
 
-**Architecture:** HTML, CSS y JavaScript a mano, sin framework ni paso de build. La lógica vive en módulos ESM puros (datos adentro, datos o HTML afuera) para que se puedan probar con `node --test` sin navegador; el DOM solo se toca en `editar.js` y `app.js`. Local primero: todo se escribe en `localStorage` y se responde al toque, y una cola de cambios sube a Supabase atrás. Al abrir, baja lo remoto y fusiona por fila con la última escritura.
+**Architecture:** HTML, CSS y JavaScript a mano, sin framework ni paso de build. La lógica vive en módulos ESM puros (datos adentro, datos o HTML afuera) para que se puedan probar con `node --test` sin navegador; el DOM solo se toca en `editar.js` y `app.js`. Local primero: todo se escribe en `localStorage` y se responde al toque, y una cola de cambios sube al Worker atrás. Al abrir, baja lo remoto y fusiona por fila con la última escritura.
 
-**Tech Stack:** JavaScript ESM, `node --test` (sin dependencias de test), Supabase (Postgres + Auth + RLS, `sa-east-1`), `@supabase/supabase-js` vendorizado en el repo, service worker propio, GitHub Pages.
+**Tech Stack:** JavaScript ESM, `node --test` (sin dependencias de test), Cloudflare D1 (SQLite) para los datos y un Worker que sirve la app y la API con una llave compartida, service worker propio, repo público en GitHub.
 
 **Spec:** `docs/superpowers/specs/2026-10-18-calendario-diseno.md`
 
@@ -19,7 +19,7 @@
 - Los controles de editar están ocultos en reposo y aparecen al pasar el mouse o al tocar.
 - La referencia visual es `.superpowers/brainstorm/2913-1792365922/content/d-tablero.html` (escritorio) y `e-celular.html` (celular). Se implementan, no se rediseñan.
 - Tipografías Bricolage Grotesque (títulos) y Figtree (interfaz), servidas desde el repo, nunca desde Google Fonts.
-- Sin dependencias de npm en tiempo de ejecución ni de test. Lo único vendorizado es el cliente de Supabase.
+- Sin dependencias de npm en tiempo de ejecución ni de test. La app habla con su propia API por `fetch`; no hay SDK de nadie.
 - Textos de interfaz en español rioplatense, voseo, minúscula de oración.
 - Nada de `console.log` en el código que queda.
 
@@ -397,40 +397,55 @@ git commit -m "feat: guardado local tolerante a fallas y cola de cambios"
 
 ---
 
-### Task 7: El proyecto de Supabase y el esquema
+### Task 7: La base en Cloudflare y el Worker
 
 **Files:**
-- Create: `calendario/supabase/migraciones/0001_esquema.sql`
-- Create: `calendario/src/config.js`
-- Modify: `Proyectos_Claude/CLAVES Y COSAS DE LOS PROYECTOS/` — anotar ahí el mail, la contraseña y la URL del proyecto
+- Create: `calendario/src/filas.js`, `calendario/src/config.js`
+- Create: `calendario/worker/index.js`, `calendario/worker/esquema.sql`, `calendario/wrangler.jsonc`
+- Modify: `Proyectos_Claude/CLAVES Y COSAS DE LOS PROYECTOS/` — anotar ahí la llave y la URL
+- Test: `calendario/tests/filas.test.js`
 
 **Interfaces:**
-- Consumes: nada.
-- Produces: `URL_SUPABASE`, `CLAVE_PUBLICA` exportadas desde `config.js`. La clave publicable va en el repo público a propósito: lo que protege los datos es RLS.
+- Consumes: `modelo.js`.
+- Produces: `aFila(tabla: string, obj: object): object` y `deFila(tabla: string, fila: object): object` en `filas.js`; `API: string` y `LLAVE_GUARDADA: string` (la clave de `localStorage`) en `config.js`. El Worker expone `GET /api/estado` → `Estado` y `POST /api/cambios` con `Cambio[]` → `{aplicados: string[]}`, los dos detrás de la cabecera `Authorization: Llave <secreto>`.
 
-**`mqvsa-membresia` y `mqvsa-devocional` no se tocan.** Ni un esquema adentro, ni pausarlos, ni leerlos. Si el plan free no admite un tercer proyecto activo, el plan B es una organización nueva en la misma cuenta; si eso tampoco sale, parar y preguntar antes de elegir otro backend.
+El Worker sirve la app y la API desde el mismo origen, así que `API` es `/api` y no hay CORS. Un solo usuario: no hay tabla de usuarios, lo que protege los datos es la llave.
 
-- [ ] **Step 1: Crear el proyecto de Supabase**
+- [ ] **Step 1: Escribir los tests que fallan** en `tests/filas.test.js`
 
-Organización `MQV_San_Antonio`, región `sa-east-1`, costo USD 0/mes. Guardar el `ref` y la clave publicable.
+```js
+test('aFila pasa a snake_case lo que la base espera', () => {
+  const f = aFila('tomas', toma);
+  assert.equal(f.que_hacer, 'Roto del brazo');
+  assert.equal(f.dia_origen, '2026-10-18');
+});
+test('los booleanos viajan como 0 y 1', () => { /* hecha, en_curso */ });
+test('graficoValores viaja como texto JSON y vuelve como objeto', () => { /* ida y vuelta */ });
+test('deFila(aFila(x)) devuelve x', () => { /* para las tres tablas */ });
+test('deFila tolera un grafico_valores nulo o roto', () => { /* null */ });
+```
 
-- [ ] **Step 2: Escribir `0001_esquema.sql`**
+- [ ] **Step 2: Correr los tests y ver que fallan**
 
-Tres tablas: `proyectos`, `tomas`, `dias`, con los campos del modelo de la Tarea 2 en `snake_case` (`que_hacer`, `dia_origen`, `dia_actual`, `dia_hecha`, `en_curso`, `grafico_valores`). Cada una con `usuario uuid not null default auth.uid()` y `actualizado timestamptz not null default now()`. `dias` tiene clave primaria `(usuario, fecha)`. Un índice único parcial `create unique index una_en_curso on tomas (usuario) where en_curso;` para que no haya dos tomas en curso. RLS prendido en las tres, con una política `for all using (usuario = auth.uid()) with check (usuario = auth.uid())`.
+Run: `cd calendario && node --test tests/filas.test.js`
+Expected: FAIL, `filas.js` no existe.
 
-- [ ] **Step 3: Aplicar la migración y crear la cuenta de Abel**
+- [ ] **Step 3: Implementar `filas.js`, el esquema, el Worker y `wrangler.jsonc`**
 
-Aplicar la migración al proyecto. Crear el usuario con su mail y una contraseña generada, y anotarla en la carpeta de claves. Confirmar que el proyecto no tiene avisos de seguridad pendientes.
+`esquema.sql`: tres tablas SQLite (`proyectos`, `tomas`, `dias`) con los campos del modelo en `snake_case`, un índice por `dia_actual` y un índice único parcial `una_en_curso on tomas(en_curso) where en_curso = 1`. El Worker compara la llave con `crypto.subtle.timingSafeEqual` sobre los bytes, responde 401 sin cuerpo cuando no coincide, y aplica los cambios con `INSERT ... ON CONFLICT(id) DO UPDATE` en un `batch`. `wrangler.jsonc` ata el binding `DB` a la base y declara los assets estáticos de la carpeta de la app.
 
-- [ ] **Step 4: Verificar que RLS bloquea de verdad**
+- [ ] **Step 4: Correr los tests, crear la base y desplegar**
 
-Con la clave publicable y sin sesión, un `select` sobre cada tabla tiene que volver vacío, y un `insert` tiene que ser rechazado. Dejarlo escrito en `supabase/verificar-rls.md` con lo que se corrió y lo que devolvió.
+Run: `cd calendario && npm test`
+Expected: PASS
+
+Después: crear la base D1, aplicarle el esquema, generar la llave y guardarla como secreto del Worker, desplegar, y comprobar contra la URL publicada que sin llave contesta 401 y con la llave contesta 200 con las tres listas vacías. Dejar lo comprobado escrito en `worker/verificar-llave.md`.
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add calendario/supabase calendario/src/config.js
-git commit -m "feat: el esquema en Supabase con RLS y la cuenta"
+git add calendario/src/filas.js calendario/src/config.js calendario/worker calendario/wrangler.jsonc calendario/tests/filas.test.js
+git commit -m "feat: la base en D1 y el Worker que la cuida con una llave"
 ```
 
 ---
@@ -439,13 +454,12 @@ git commit -m "feat: el esquema en Supabase con RLS y la cuenta"
 
 **Files:**
 - Create: `calendario/src/nube.js`, `calendario/src/sync.js`
-- Create: `calendario/vendor/supabase.js` (cliente vendorizado, versión fija)
 - Test: `calendario/tests/sync.test.js`
 
 **Interfaces:**
 - Consumes: `config.js`, `modelo.js`, `almacen-local.js`.
 - Produces:
-  - `nube.js`: `crearNube(cliente): Nube` con `bajarEstado(): Promise<Estado>`, `subirCambios(cambios: Cambio[]): Promise<string[]>` (devuelve los ids aplicados).
+  - `nube.js`: `crearNube({llave, traer}): Nube` con `bajarEstado(): Promise<Estado>`, `subirCambios(cambios: Cambio[]): Promise<string[]>` (devuelve los ids aplicados) y `hayLlave(): boolean`. `traer` es `fetch`, que los tests reemplazan por un doble.
   - `sync.js`: `fusionar(local: Estado, remoto: Estado): Estado`, `sincronizar({almacen, nube}): Promise<{estado: Estado, subio: boolean}>`.
 
 - [ ] **Step 1: Escribir los tests que fallan** en `tests/sync.test.js`
@@ -472,7 +486,7 @@ Expected: FAIL
 
 - [ ] **Step 3: Implementar `src/nube.js` y `src/sync.js`**
 
-`nube.js` traduce entre el `camelCase` del modelo y el `snake_case` de las tablas, y usa `upsert` por `id`. `sync.js` no conoce Supabase: recibe `almacen` y `nube` y trabaja contra sus interfaces, por eso los tests le pasan dobles. Vendorizar `@supabase/supabase-js` con versión fija en `vendor/supabase.js`.
+`nube.js` habla con el Worker por `fetch`, manda la llave en la cabecera `Authorization` y normaliza lo que baja; la traducción de nombres ya la hace el Worker con `filas.js`. `sync.js` no conoce la red: recibe `almacen` y `nube` y trabaja contra sus interfaces, por eso los tests le pasan dobles.
 
 - [ ] **Step 4: Correr los tests y ver que pasan**
 
@@ -482,7 +496,7 @@ Expected: PASS
 - [ ] **Step 5: Commit**
 
 ```bash
-git add calendario/src/nube.js calendario/src/sync.js calendario/vendor calendario/tests/sync.test.js
+git add calendario/src/nube.js calendario/src/sync.js calendario/tests/sync.test.js calendario/tests/nube.test.js
 git commit -m "feat: bajar, subir y fusionar con la última escritura"
 ```
 

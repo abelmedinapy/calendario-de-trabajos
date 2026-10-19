@@ -80,23 +80,21 @@ es la referencia visual de la construcción** — no se rediseña, se implementa
 Abel dijo "ve dónde puede ser"; estas son decisiones de constructor, no cosas
 que él haya pedido:
 
-- **Supabase** para los datos: proyecto nuevo en la organización
-  `MQV_San_Antonio` (plan free), región `sa-east-1`, que es la más cerca de
-  Paraguay. Cuesta **USD 0/mes**. **Los proyectos `mqvsa-membresia` y
-  `mqvsa-devocional` no se tocan**: ni para meter un esquema, ni para pausarlos,
-  ni para nada. Si el plan free no admite un tercer proyecto activo, el plan B
-  es una organización nueva en la misma cuenta; y si eso tampoco, se busca otro
-  backend gratis con HTTPS antes que tocar lo que ya existe.
-- **GitHub Pages** para servir la PWA, desde un repo público. Ya está logueado
-  como `abelmedinapy` con permisos de `repo` y `workflow`. Da HTTPS, que es
-  condición para instalar una PWA y para el service worker, y está siempre
-  arriba sin que él mantenga nada.
-- **Cuenta única con email y contraseña** (Supabase Auth), no magic link: el
-  magic link depende del mail y del límite de envíos del plan free. La cuenta
-  la crea el constructor y deja la contraseña anotada en
-  `Proyectos_Claude/CLAVES Y COSAS DE LOS PROYECTOS`. Abel la escribe una vez
-  por aparato y la sesión queda guardada. RLS para que las filas sean solo
-  suyas.
+- **Cloudflare** para todo: los datos en **D1**, la API y el hosting en un
+  **Worker**. Su cuenta ya está autenticada en la Mac con permisos de `d1`,
+  `workers` y `pages`, así que no hay nada que crear ni configurar. Es gratis,
+  está siempre arriba y da HTTPS, que es condición para instalar una PWA y para
+  el service worker. El mismo Worker sirve la app y la API, así que no hay CORS
+  ni dos lugares que mantener.
+  *(Supabase quedó descartado: el plan free admite dos proyectos por usuario y
+  él ya tiene dos. `mqvsa-membresia` y `mqvsa-devocional` no se tocan.)*
+- **El código, igual en un repo público de GitHub** (`abelmedinapy`), por
+  historial y respaldo, aunque quien sirva la app sea Cloudflare.
+- **Una sola llave compartida** en vez de cuentas y contraseñas: el Worker
+  guarda un secreto, Abel lo escribe una vez por aparato y queda guardado en el
+  navegador. No hay tabla de usuarios ni sesiones que vencen. La llave la genera
+  el constructor y la deja anotada en
+  `Proyectos_Claude/CLAVES Y COSAS DE LOS PROYECTOS`.
 - **HTML, CSS y JavaScript a mano, sin framework ni paso de build.** Es una sola
   pantalla, tiene que andar offline y tiene que ser fácil de retocar después.
   Supabase entra por su cliente ESM desde CDN.
@@ -193,6 +191,10 @@ cambiar si no le gustan:
 
 Una idea de la forma, no el esquema final:
 
+Las tablas viven en D1 (SQLite). Como hay un solo usuario, no hay columna de
+usuario ni políticas por fila: lo que protege los datos es la llave que pide el
+Worker en cada pedido.
+
 - `proyectos` — nombre, etiqueta, color, si está archivado.
 - `tomas` — proyecto, código, qué hacer, detalle, el día en que nació, el día en
   el que está, si está hecha, si está en curso, el gráfico opcional y sus
@@ -200,7 +202,7 @@ Una idea de la forma, no el esquema final:
 - `dias` — la fecha, el objetivo del día y la línea de RENDER si fue escrita a
   mano.
 
-Todo con RLS atado al usuario.
+El Worker rechaza con 401 cualquier pedido sin la llave correcta.
 
 ## Qué queda a criterio del constructor
 
