@@ -95,16 +95,30 @@ export function ponerEnCurso(estado, tomaId) {
 const TEXTOS_DE_TOMA = ['queHacer', 'codigo', 'detalle'];
 const TEXTOS_DE_PROYECTO = ['nombre', 'etiqueta'];
 
+// El código sale solo: la inicial del proyecto y cuatro números. Fortaleza da
+// F8934, Munich da M1234. Se puede escribir encima si el código de verdad es
+// otro.
+export function codigoNuevo(nombreProyecto, usados = [], azar = Math.random) {
+  const letra = (nombreProyecto.match(/\p{L}/u)?.[0] || '').toUpperCase();
+  const tomados = new Set(usados);
+  for (let intento = 0; intento < 20; intento += 1) {
+    const codigo = letra + String(Math.floor(azar() * 10000)).padStart(4, '0');
+    if (!tomados.has(codigo)) return codigo;
+  }
+  return letra + String(Date.now() % 10000).padStart(4, '0');
+}
+
 // Agregar es un clic y escribir en la tarjeta misma. El borrador nace vacío y
 // no viaja a la nube: lo que lo sube es el primer texto. Si queda vacío se va
 // sin dejar lápida, porque nunca llegó a existir afuera.
 export function agregarBorradorDeToma(estado, { proyecto, dia } = {}) {
   if (!proyecto || !dia) return nada(estado);
   const hermanas = estado.tomas.filter((t) => t.proyecto === proyecto && !t.borrado);
+  const duenio = estado.proyectos.find((p) => p.id === proyecto);
   const toma = {
     id: nuevoId(),
     proyecto,
-    codigo: '',
+    codigo: codigoNuevo(duenio?.nombre || '', hermanas.map((t) => t.codigo)),
     queHacer: '',
     detalle: '',
     diaOrigen: dia,
@@ -132,6 +146,17 @@ export function agregarBorradorDeProyecto(estado) {
     actualizado: ahora()
   };
   return { estado: { ...estado, proyectos: [...estado.proyectos, proyecto] }, cambios: [] };
+}
+
+// Un borrador abandonado (se cerró la app a mitad de escribir) no tiene por
+// qué sobrevivir al día siguiente: nunca llegó a la nube.
+export function limpiarBorradores(estado) {
+  const tomas = estado.tomas.filter((t) => t.queHacer || t.borrado);
+  const proyectos = estado.proyectos.filter((p) => p.nombre || p.borrado);
+  if (tomas.length === estado.tomas.length && proyectos.length === estado.proyectos.length) {
+    return estado;
+  }
+  return { ...estado, tomas, proyectos };
 }
 
 export function quitarBorradorVacio(estado, id, tabla = 'tomas') {
@@ -377,6 +402,18 @@ export function borrar(estado, tabla, id) {
   return nada(estado);
 }
 
+// Qué hace el Enter según dónde esté el cursor. Anotar el día es escribir una
+// lista: Enter cierra el trabajo y abre el siguiente, y Shift+Enter es el
+// salto de renglón de siempre. En el detalle no, que es donde se hacen las
+// listas con guiones y el Enter tiene que ser un salto.
+export function queHaceElEnter({ campo, shift = false, objetivo = false }) {
+  if (objetivo) return 'cerrar';
+  if (campo === 'detalle') return 'salto';
+  if (shift) return 'salto';
+  if (campo === 'queHacer' || campo === 'nombre') return 'siguiente';
+  return 'cerrar';
+}
+
 // Un solo oyente en la raíz: las tarjetas se redibujan enteras y no hay que
 // volver a atar nada.
 export function conectar(raiz, acciones) {
@@ -449,6 +486,33 @@ export function conectar(raiz, acciones) {
     if (!campo) return;
     clearTimeout(relojes.get(campo));
     avisar(campo);
+  });
+
+  raiz.addEventListener('keydown', (evento) => {
+    if (evento.key !== 'Enter') return;
+    const campo = campoDe(evento.target);
+    if (!campo) return;
+
+    const que = queHaceElEnter({
+      campo: campo.dataset.campo,
+      shift: evento.shiftKey,
+      objetivo: campo.dataset.accion === 'objetivo'
+    });
+    if (que === 'salto') return;
+
+    evento.preventDefault();
+    clearTimeout(relojes.get(campo));
+    avisar(campo);
+
+    if (que === 'cerrar') {
+      campo.blur();
+      return;
+    }
+    acciones.siguiente?.({
+      toma: campo.closest('[data-toma]')?.dataset.toma,
+      proyecto: campo.closest('[data-proyecto]')?.dataset.proyecto,
+      texto: campo.textContent
+    });
   });
 
   // Arrastrar una tarjeta para cambiar el orden. En táctil no hay arrastre, y

@@ -12,7 +12,8 @@ import {
   conectar, marcarHecha, ponerEnCurso, ponerObjetivo, moverTrabajo,
   subirTrabajo, bajarTrabajo, soltarAntesDe,
   ponerTextoDeToma, ponerTextoDeProyecto,
-  agregarBorradorDeToma, agregarBorradorDeProyecto, quitarBorradorVacio, borrar,
+  agregarBorradorDeToma, agregarBorradorDeProyecto, quitarBorradorVacio,
+  limpiarBorradores, borrar,
   ponerGrafico, ponerValorDeGrafico
 } from './editar.js';
 
@@ -50,6 +51,13 @@ function arrancar() {
   let sinSubir = 0;
   let rechazados = [];
   let moviendo = null;
+
+  // Guarda local sin encolar nada: para los borradores, que todavía no tienen
+  // por qué viajar pero sí tienen que sobrevivir a la próxima sincronización.
+  const anotarBorrador = (nuevo) => {
+    estado = nuevo;
+    almacen.guardarEstado(estado);
+  };
 
   const guardar = (nuevo, cambios) => {
     estado = nuevo;
@@ -179,7 +187,7 @@ function arrancar() {
   }
 
   async function empezar() {
-    estado = almacen.leerEstado();
+    estado = limpiarBorradores(almacen.leerEstado());
     dia = hoy();
     dibujar();
     await subir();
@@ -210,7 +218,7 @@ function arrancar() {
     'nuevo-proyecto': () => {
       soltarElCampo();
       const { estado: nuevo } = agregarBorradorDeProyecto(estado);
-      estado = nuevo;
+      anotarBorrador(nuevo);
       editando = true;
       dibujar();
       enfocar('[data-campo="nombre"]:empty');
@@ -219,7 +227,7 @@ function arrancar() {
     'nueva-toma': ({ proyecto }) => {
       soltarElCampo();
       const { estado: nuevo } = agregarBorradorDeToma(estado, { proyecto, dia });
-      estado = nuevo;
+      anotarBorrador(nuevo);
       editando = true;
       dibujar();
       enfocar('[data-campo="queHacer"]:empty');
@@ -250,6 +258,26 @@ function arrancar() {
       // El número cambia el dibujo de arriba, no solo el renglón que se está
       // escribiendo: queda un redibujo pendiente para cuando suelte el campo.
       if (cambios.length) quedoPorDibujar = true;
+    },
+
+    // Enter encadena: cierra lo que estabas escribiendo y abre el siguiente
+    // trabajo del mismo proyecto, con el cursor adentro. Anotar el día es
+    // escribir una lista, no ir y volver al botón.
+    siguiente: ({ proyecto, texto }) => {
+      // Soltar el campo antes: si no, dibujar() se posterga para no pisar el
+      // cursor y la tarjeta nueva no llega a aparecer.
+      soltarElCampo();
+      // Enter sobre un trabajo vacío cierra la cadena: el borrador ya se fue
+      // del estado al soltarlo, pero el dibujo quedó postergado por el cursor.
+      if (!texto.trim()) {
+        dibujar();
+        return;
+      }
+      const { estado: nuevo } = agregarBorradorDeToma(estado, { proyecto, dia });
+      anotarBorrador(nuevo);
+      editando = true;
+      dibujar();
+      enfocar('[data-campo="queHacer"]:empty');
     },
 
     subir: ({ toma }) => {
@@ -299,8 +327,7 @@ function arrancar() {
       if (campo === 'queHacer' && !texto.trim()) {
         const { estado: nuevo, cambios } = quitarBorradorVacio(estado, toma, 'tomas');
         if (cambios.length === 0 && nuevo !== estado) {
-          estado = nuevo;
-          almacen.guardarEstado(estado);
+          anotarBorrador(nuevo);
           dibujar();
         }
         return;
@@ -313,8 +340,7 @@ function arrancar() {
       if (campo === 'nombre' && !texto.trim()) {
         const { estado: nuevo, cambios } = quitarBorradorVacio(estado, proyecto, 'proyectos');
         if (cambios.length === 0 && nuevo !== estado) {
-          estado = nuevo;
-          almacen.guardarEstado(estado);
+          anotarBorrador(nuevo);
           dibujar();
         }
         return;

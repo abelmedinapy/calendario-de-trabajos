@@ -7,7 +7,8 @@ import {
   ponerTextoDeToma, ponerTextoDeProyecto,
   agregarBorradorDeToma, agregarBorradorDeProyecto, quitarBorradorVacio,
   ponerGrafico, ponerValorDeGrafico, moverTrabajo,
-  subirTrabajo, bajarTrabajo, soltarAntesDe
+  subirTrabajo, bajarTrabajo, soltarAntesDe, queHaceElEnter, limpiarBorradores,
+  codigoNuevo
 } from '../src/editar.js';
 
 const DIA = '2026-10-18';
@@ -442,4 +443,82 @@ test('el orden no se mezcla entre proyectos', () => {
   let estado = agregarToma(dos, { proyecto: 'p1', queHacer: 'a', dia: DIA }).estado;
   estado = agregarToma(estado, { proyecto: 'p2', queHacer: 'z', dia: DIA }).estado;
   assert.deepEqual(subirTrabajo(estado, estado.tomas[1].id).cambios, []);
+});
+
+test('Enter en el título de un trabajo abre el siguiente', () => {
+  assert.equal(queHaceElEnter({ campo: 'queHacer', shift: false }), 'siguiente');
+});
+
+test('Shift+Enter en el título es un salto de renglón', () => {
+  assert.equal(queHaceElEnter({ campo: 'queHacer', shift: true }), 'salto');
+});
+
+test('Enter en el nombre del proyecto abre su primer trabajo', () => {
+  assert.equal(queHaceElEnter({ campo: 'nombre', shift: false }), 'siguiente');
+});
+
+test('en el detalle Enter siempre es salto: ahí se hacen las listas', () => {
+  assert.equal(queHaceElEnter({ campo: 'detalle', shift: false }), 'salto');
+  assert.equal(queHaceElEnter({ campo: 'detalle', shift: true }), 'salto');
+});
+
+test('en la etiqueta y el código Enter cierra el campo, no abre nada', () => {
+  assert.equal(queHaceElEnter({ campo: 'etiqueta', shift: false }), 'cerrar');
+  assert.equal(queHaceElEnter({ campo: 'codigo', shift: false }), 'cerrar');
+});
+
+test('en el objetivo del día Enter cierra el campo', () => {
+  assert.equal(queHaceElEnter({ campo: null, objetivo: true, shift: false }), 'cerrar');
+});
+
+test('limpiarBorradores saca los que quedaron sin texto de una sesión anterior', () => {
+  const estado = normalizarEstado({
+    proyectos: [{ id: 'p1', nombre: 'Fortaleza' }, { id: 'p2', nombre: '' }],
+    tomas: [
+      { id: 't1', proyecto: 'p1', queHacer: 'roto', diaActual: DIA },
+      { id: 't2', proyecto: 'p1', queHacer: '', diaActual: DIA }
+    ]
+  });
+  const limpio = limpiarBorradores(estado);
+  assert.deepEqual(limpio.tomas.map((t) => t.id), ['t1']);
+  assert.deepEqual(limpio.proyectos.map((p) => p.id), ['p1']);
+});
+
+test('limpiarBorradores no toca nada si no hay borradores', () => {
+  const estado = normalizarEstado({
+    proyectos: [{ id: 'p1', nombre: 'Fortaleza' }],
+    tomas: [{ id: 't1', proyecto: 'p1', queHacer: 'roto', diaActual: DIA }]
+  });
+  assert.equal(limpiarBorradores(estado), estado);
+});
+
+test('el código sale de la inicial del proyecto y cuatro números', () => {
+  assert.match(codigoNuevo('Fortaleza', [], () => 0.8934), /^F\d{4}$/);
+  assert.equal(codigoNuevo('Munich', [], () => 0.1234), 'M1234');
+});
+
+test('el código usa la primera letra de verdad, no un espacio ni un signo', () => {
+  assert.match(codigoNuevo('  munich', [], () => 0.5), /^M/);
+  assert.match(codigoNuevo('3 Cerditos', [], () => 0.5), /^C/);
+});
+
+test('un proyecto sin nombre todavía no tiene letra', () => {
+  assert.match(codigoNuevo('', [], () => 0.5), /^\d{4}$/);
+});
+
+test('el código no se repite dentro del mismo proyecto', () => {
+  let n = 0;
+  const azar = () => [0.1111, 0.1111, 0.2222][n++];
+  assert.equal(codigoNuevo('Fortaleza', ['F1111'], azar), 'F2222');
+});
+
+test('un trabajo nuevo nace con su código puesto', () => {
+  const { estado } = agregarBorradorDeToma(conProyecto(), { proyecto: 'p1', dia: DIA });
+  assert.match(estado.tomas[0].codigo, /^F\d{4}$/);
+});
+
+test('dos trabajos del mismo proyecto no comparten código', () => {
+  const uno = agregarBorradorDeToma(conProyecto(), { proyecto: 'p1', dia: DIA }).estado;
+  const dos = agregarBorradorDeToma(uno, { proyecto: 'p1', dia: DIA }).estado;
+  assert.notEqual(dos.tomas[0].codigo, dos.tomas[1].codigo);
 });
