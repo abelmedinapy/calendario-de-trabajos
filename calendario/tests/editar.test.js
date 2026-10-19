@@ -5,7 +5,8 @@ import { normalizarEstado, agruparPorProyecto } from '../src/modelo.js';
 import {
   agregarProyecto, agregarToma, marcarHecha, ponerEnCurso, ponerObjetivo, borrar,
   ponerTextoDeToma, ponerTextoDeProyecto,
-  agregarBorradorDeToma, agregarBorradorDeProyecto, quitarBorradorVacio
+  agregarBorradorDeToma, agregarBorradorDeProyecto, quitarBorradorVacio,
+  ponerGrafico, ponerValorDeGrafico
 } from '../src/editar.js';
 
 const DIA = '2026-10-18';
@@ -224,5 +225,139 @@ test('un proyecto sin nombre se va sin dejar rastro', () => {
   const { estado } = agregarBorradorDeProyecto(normalizarEstado(null));
   const { estado: despues, cambios } = quitarBorradorVacio(estado, estado.proyectos[0].id, 'proyectos');
   assert.deepEqual(despues.proyectos, []);
+  assert.deepEqual(cambios, []);
+});
+
+// ---------- el gráfico chico de la tarjeta ----------
+// Elegir el gráfico es un clic, y sus números se escriben en la tarjeta misma,
+// como el resto de los textos.
+
+test('ponerGrafico le pone un gráfico a un trabajo que no tenía', () => {
+  const estado = agregarToma(conProyecto(), { proyecto: 'p1', queHacer: 'roto', dia: DIA }).estado;
+  const id = estado.tomas[0].id;
+  const { estado: despues, cambios } = ponerGrafico(estado, id, 'capas');
+  assert.equal(despues.tomas[0].grafico, 'capas');
+  assert.equal(cambios.length, 1);
+  assert.equal(cambios[0].id, id);
+  assert.equal(cambios[0].tabla, 'tomas');
+});
+
+test('el gráfico recién puesto ya se dibuja: nace con valores, no vacío', () => {
+  // Con capas en cero no se vería ni una barra y parecería que no pasó nada.
+  const estado = agregarToma(conProyecto(), { proyecto: 'p1', queHacer: 'roto', dia: DIA }).estado;
+  const capas = ponerGrafico(estado, estado.tomas[0].id, 'capas').estado.tomas[0];
+  assert.ok(capas.graficoValores.total > 0);
+  const cadencia = ponerGrafico(estado, estado.tomas[0].id, 'cadencia').estado.tomas[0];
+  assert.ok(cadencia.graficoValores.cada >= 1);
+});
+
+test('cambiar de gráfico trae los valores del nuevo, no los del viejo', () => {
+  let estado = agregarToma(conProyecto(), { proyecto: 'p1', queHacer: 'roto', dia: DIA }).estado;
+  const id = estado.tomas[0].id;
+  estado = ponerGrafico(estado, id, 'capas').estado;
+  estado = ponerGrafico(estado, id, 'cadencia').estado;
+  assert.equal(estado.tomas[0].grafico, 'cadencia');
+  assert.deepEqual(Object.keys(estado.tomas[0].graficoValores).sort(), ['cada', 'imgs']);
+});
+
+test('ponerGrafico sin gráfico se lo saca al trabajo', () => {
+  let estado = agregarToma(conProyecto(), { proyecto: 'p1', queHacer: 'roto', dia: DIA }).estado;
+  const id = estado.tomas[0].id;
+  estado = ponerGrafico(estado, id, 'curva').estado;
+  const { estado: despues, cambios } = ponerGrafico(estado, id, '');
+  assert.equal(despues.tomas[0].grafico, null);
+  assert.equal(despues.tomas[0].graficoValores, null);
+  assert.equal(cambios.length, 1);
+});
+
+test('ponerGrafico ignora un gráfico que no existe', () => {
+  const estado = agregarToma(conProyecto(), { proyecto: 'p1', queHacer: 'roto', dia: DIA }).estado;
+  const { cambios } = ponerGrafico(estado, estado.tomas[0].id, 'barras');
+  assert.deepEqual(cambios, []);
+});
+
+test('elegir otra vez el mismo gráfico no encola un cambio al pedo', () => {
+  let estado = agregarToma(conProyecto(), { proyecto: 'p1', queHacer: 'roto', dia: DIA }).estado;
+  const id = estado.tomas[0].id;
+  estado = ponerGrafico(estado, id, 'capas').estado;
+  const { cambios } = ponerGrafico(estado, id, 'capas');
+  assert.deepEqual(cambios, []);
+});
+
+test('ponerGrafico de un trabajo que no existe no hace nada', () => {
+  const previo = conProyecto();
+  const { estado, cambios } = ponerGrafico(previo, 'no-existe', 'capas');
+  assert.deepEqual(estado, previo);
+  assert.deepEqual(cambios, []);
+});
+
+test('ponerGrafico no muta el estado que recibe', () => {
+  const estado = agregarToma(conProyecto(), { proyecto: 'p1', queHacer: 'roto', dia: DIA }).estado;
+  ponerGrafico(estado, estado.tomas[0].id, 'curva');
+  assert.equal(estado.tomas[0].grafico, null);
+});
+
+const conGrafico = (tipo) => {
+  const estado = agregarToma(conProyecto(), { proyecto: 'p1', queHacer: 'roto', dia: DIA }).estado;
+  return ponerGrafico(estado, estado.tomas[0].id, tipo).estado;
+};
+
+test('los números del gráfico se escriben como texto y se guardan como números', () => {
+  const estado = conGrafico('capas');
+  const id = estado.tomas[0].id;
+  const { estado: despues, cambios } = ponerValorDeGrafico(estado, id, 'total', ' 5 ');
+  assert.equal(despues.tomas[0].graficoValores.total, 5);
+  assert.equal(cambios.length, 1);
+});
+
+test('lo que se escribe en un valor del gráfico no pisa los otros', () => {
+  const estado = conGrafico('cadencia');
+  const id = estado.tomas[0].id;
+  const antes = estado.tomas[0].graficoValores.imgs;
+  const despues = ponerValorDeGrafico(estado, id, 'cada', '4').estado.tomas[0];
+  assert.equal(despues.graficoValores.cada, 4);
+  assert.equal(despues.graficoValores.imgs, antes);
+});
+
+test('la cadencia nunca queda en cero: dividir por cero no dibuja ni un cuadro', () => {
+  const estado = conGrafico('cadencia');
+  const despues = ponerValorDeGrafico(estado, estado.tomas[0].id, 'cada', '0').estado;
+  assert.equal(despues.tomas[0].graficoValores.cada, 1);
+});
+
+test('un número con basura adentro no rompe el dibujo', () => {
+  const estado = conGrafico('capas');
+  const despues = ponerValorDeGrafico(estado, estado.tomas[0].id, 'total', 'tres').estado;
+  assert.equal(despues.tomas[0].graficoValores.total, 0);
+});
+
+test('un total enorme no dibuja mil barritas', () => {
+  const estado = conGrafico('capas');
+  const despues = ponerValorDeGrafico(estado, estado.tomas[0].id, 'total', '9999').estado;
+  assert.ok(despues.tomas[0].graficoValores.total <= 40);
+});
+
+test('la curva guarda tal cual lo que dice al pie', () => {
+  const estado = conGrafico('curva');
+  const despues = ponerValorDeGrafico(estado, estado.tomas[0].id, 'ev', ' +0.5 EV ').estado;
+  assert.equal(despues.tomas[0].graficoValores.ev, '+0.5 EV');
+});
+
+test('un valor que no es de ese gráfico no se guarda', () => {
+  const estado = conGrafico('capas');
+  const { cambios } = ponerValorDeGrafico(estado, estado.tomas[0].id, 'ev', '+1');
+  assert.deepEqual(cambios, []);
+});
+
+test('sin gráfico no hay valores que poner', () => {
+  const estado = agregarToma(conProyecto(), { proyecto: 'p1', queHacer: 'roto', dia: DIA }).estado;
+  const { cambios } = ponerValorDeGrafico(estado, estado.tomas[0].id, 'total', '3');
+  assert.deepEqual(cambios, []);
+});
+
+test('escribir el mismo valor no encola un cambio al pedo', () => {
+  const estado = conGrafico('cadencia');
+  const cada = estado.tomas[0].graficoValores.cada;
+  const { cambios } = ponerValorDeGrafico(estado, estado.tomas[0].id, 'cada', String(cada));
   assert.deepEqual(cambios, []);
 });

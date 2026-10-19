@@ -180,6 +180,71 @@ export function ponerTextoDeToma(estado, tomaId, campo, texto) {
   };
 }
 
+// ---------- el gráfico chico de la tarjeta ----------
+// Los tres dibujos ya existían en la vista pero no había forma de ponerlos.
+// El tipo se elige con un clic y los valores se escriben en la tarjeta misma,
+// como el resto de los textos.
+
+// Nace con valores para que se vea apenas lo elegís: un gráfico en cero no
+// dibuja nada y parece que el clic no hizo nada.
+const GRAFICOS = {
+  capas: { hechas: 0, total: 3 },
+  curva: { ev: '' },
+  cadencia: { cada: 3, imgs: 8 }
+};
+
+// Cuánto aguanta cada número sin romper el dibujo: cuarenta barritas ya no se
+// distinguen, y una cadencia en cero no marcaría ni un cuadro.
+const LIMITES = {
+  hechas: [0, 99], total: [0, 40], cada: [1, 10], imgs: [0, 999]
+};
+
+const entre = (n, [minimo, maximo]) => Math.min(Math.max(n, minimo), maximo);
+
+const comoNumero = (texto, limites) => {
+  const n = Math.trunc(Number(String(texto ?? '').trim()));
+  return entre(Number.isFinite(n) ? n : 0, limites);
+};
+
+const conGrafico = (vieja, grafico, valores) => ({
+  ...vieja, grafico, graficoValores: valores, actualizado: ahora()
+});
+
+export function ponerGrafico(estado, tomaId, grafico) {
+  const vieja = estado.tomas.find((t) => t.id === tomaId);
+  if (!vieja) return nada(estado);
+  // '' es "sin gráfico"; cualquier otra cosa que no sea de la lista, se ignora.
+  if (grafico && !GRAFICOS[grafico]) return nada(estado);
+  const tipo = grafico || null;
+  if (vieja.grafico === tipo) return nada(estado);
+
+  const nueva = conGrafico(vieja, tipo, tipo ? { ...GRAFICOS[tipo] } : null);
+  return {
+    estado: { ...estado, tomas: estado.tomas.map((t) => (t.id === tomaId ? nueva : t)) },
+    cambios: [cambioDe('tomas', nueva)]
+  };
+}
+
+export function ponerValorDeGrafico(estado, tomaId, valor, texto) {
+  const vieja = estado.tomas.find((t) => t.id === tomaId);
+  if (!vieja || !vieja.grafico) return nada(estado);
+
+  const suyos = GRAFICOS[vieja.grafico];
+  if (!suyos || !(valor in suyos)) return nada(estado);
+
+  const limpio = LIMITES[valor]
+    ? comoNumero(texto, LIMITES[valor])
+    : String(texto ?? '').trim();
+  const valores = { ...suyos, ...vieja.graficoValores };
+  if (valores[valor] === limpio) return nada(estado);
+
+  const nueva = conGrafico(vieja, vieja.grafico, { ...valores, [valor]: limpio });
+  return {
+    estado: { ...estado, tomas: estado.tomas.map((t) => (t.id === tomaId ? nueva : t)) },
+    cambios: [cambioDe('tomas', nueva)]
+  };
+}
+
 export function ponerObjetivo(estado, fecha, texto) {
   const viejo = estado.dias.find((d) => d.fecha === fecha);
   const dia = {
@@ -249,7 +314,8 @@ export function conectar(raiz, acciones) {
       const columna = boton.closest('[data-proyecto]');
       acciones[boton.dataset.accion]?.({
         toma: tarjeta?.dataset.toma,
-        proyecto: columna?.dataset.proyecto
+        proyecto: columna?.dataset.proyecto,
+        grafico: boton.dataset.grafico
       });
       return;
     }
@@ -268,11 +334,19 @@ export function conectar(raiz, acciones) {
   // sacarle el foco al campo.
   const relojes = new Map();
 
-  const campoDe = (nodo) => nodo.closest?.('[data-accion="objetivo"], [data-campo]');
+  const campoDe = (nodo) => nodo.closest?.('[data-accion="objetivo"], [data-campo], [data-valor]');
 
   function avisar(campo) {
     if (campo.dataset.accion === 'objetivo') {
       acciones.objetivo?.({ texto: campo.textContent });
+      return;
+    }
+    if (campo.dataset.valor) {
+      acciones.valorDeGrafico?.({
+        toma: campo.closest('[data-toma]')?.dataset.toma,
+        valor: campo.dataset.valor,
+        texto: campo.textContent
+      });
       return;
     }
     const tarjeta = campo.closest('[data-toma]');

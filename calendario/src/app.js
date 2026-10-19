@@ -11,7 +11,8 @@ import { tableroHTML } from './vista.js';
 import {
   conectar, marcarHecha, ponerEnCurso, ponerObjetivo,
   ponerTextoDeToma, ponerTextoDeProyecto,
-  agregarBorradorDeToma, agregarBorradorDeProyecto, quitarBorradorVacio, borrar
+  agregarBorradorDeToma, agregarBorradorDeProyecto, quitarBorradorVacio, borrar,
+  ponerGrafico, ponerValorDeGrafico
 } from './editar.js';
 
 export function decidirArranque({ hayLlave, hayLocal, hayRed }) {
@@ -87,8 +88,8 @@ function arrancar() {
 
   // Redibujar mientras Abel escribe le destruye el campo debajo del cursor y se
   // lleva puesto lo que estaba tecleando. Se espera a que salga.
-  const escribiendo = () =>
-    Boolean(document.activeElement?.closest?.('[data-accion="objetivo"], [data-campo]'));
+  const ESCRIBIENDO = '[data-accion="objetivo"], [data-campo], [data-valor]';
+  const escribiendo = () => Boolean(document.activeElement?.closest?.(ESCRIBIENDO));
 
   // Guarda y sube sin redibujar: el campo ya muestra lo que se escribió, y
   // volver a pintarlo le saca el cursor de lugar.
@@ -107,7 +108,7 @@ function arrancar() {
   // primero, que además guarda lo que estaba escrito.
   function soltarElCampo() {
     const activo = document.activeElement;
-    if (activo?.closest?.('[data-accion="objetivo"], [data-campo]')) activo.blur();
+    if (activo?.closest?.(ESCRIBIENDO)) activo.blur();
   }
 
   // Después de redibujar, el cursor va al campo recién creado.
@@ -132,7 +133,7 @@ function arrancar() {
   }
 
   raiz.addEventListener('focusout', (evento) => {
-    if (evento.target.closest?.('[data-accion="objetivo"], [data-campo]') && quedoPorDibujar) {
+    if (evento.target.closest?.(ESCRIBIENDO) && quedoPorDibujar) {
       setTimeout(dibujar, 0);
     }
   });
@@ -219,6 +220,25 @@ function arrancar() {
       editando = true;
       dibujar();
       enfocar('[data-campo="queHacer"]:empty');
+    },
+
+    // El gráfico chico: elegirlo es un clic y nace con valores a la vista, así
+    // que el cursor puede ir derecho al primer número a corregirlo.
+    grafico: ({ toma, grafico }) => {
+      soltarElCampo();
+      const { estado: nuevo, cambios } = ponerGrafico(estado, toma, grafico);
+      if (!cambios.length) return;
+      editando = true;
+      guardar(nuevo, cambios);
+      enfocar(`[data-toma="${toma}"] [data-valor]`);
+    },
+
+    valorDeGrafico: ({ toma, valor, texto }) => {
+      const { estado: nuevo, cambios } = ponerValorDeGrafico(estado, toma, valor, texto);
+      guardarSinDibujar(nuevo, cambios);
+      // El número cambia el dibujo de arriba, no solo el renglón que se está
+      // escribiendo: queda un redibujo pendiente para cuando suelte el campo.
+      if (cambios.length) quedoPorDibujar = true;
     },
 
     'borrar-toma': ({ toma }) => {

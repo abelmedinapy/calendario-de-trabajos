@@ -17,31 +17,55 @@ export function escapar(texto) {
     .replace(/"/g, '&quot;');
 }
 
-function graficoHTML(toma) {
+// Los números del gráfico se corrigen donde se leen, como el resto de los
+// textos de la tarjeta. En reposo son texto pelado y la captura no cambia.
+const GRAFICOS = [['capas', 'Capas'], ['curva', 'Curva'], ['cadencia', 'Cadencia']];
+
+function graficoHTML(toma, editando = false) {
   const v = toma.graficoValores || {};
+  const valor = (nombre, texto, vacio) => editando
+    ? `<span contenteditable="plaintext-only" data-valor="${nombre}"`
+      + ` data-vacio="${escapar(vacio)}">${escapar(texto)}</span>`
+    : `<span>${escapar(texto)}</span>`;
+
   if (toma.grafico === 'capas') {
     const total = Number(v.total) || 0;
     const hechas = Number(v.hechas) || 0;
     const barras = Array.from({ length: total },
       (_, i) => `<i class="${i < hechas ? 'f' : ''}"></i>`).join('');
     return `<div class="layers">${barras}</div>
-      <div class="meta"><span>Capas</span><b>${hechas} / ${total}</b></div>`;
+      <div class="meta"><span>Capas</span>
+        <b>${valor('hechas', hechas, '0')} / ${valor('total', total, '0')}</b></div>`;
   }
   if (toma.grafico === 'curva') {
     return `<div class="curve"><svg viewBox="0 0 300 58" preserveAspectRatio="none" aria-hidden="true">
       <path class="antes" d="M0 56 C 70 54, 110 34, 150 31 S 240 20, 300 16"/>
       <path class="ahora" d="M0 52 C 70 50, 110 22, 150 20 S 240 8, 300 5"/>
     </svg></div>
-      <div class="meta"><span>Pase anterior punteado</span><b>${escapar(v.ev ?? '')}</b></div>`;
+      <div class="meta"><span>Pase anterior punteado</span>
+        <b>${valor('ev', v.ev ?? '', '+0.5 EV')}</b></div>`;
   }
   if (toma.grafico === 'cadencia') {
     const cada = Number(v.cada) || 3;
     const cuadros = Array.from({ length: 10 },
       (_, i) => `<i class="${i % cada === 0 ? 'k' : ''}"></i>`).join('');
     return `<div class="strip">${cuadros}</div>
-      <div class="meta"><span>1 de cada ${cada} cuadros</span><b>${escapar(v.imgs ?? '')} img/s</b></div>`;
+      <div class="meta"><span>1 de cada ${valor('cada', cada, '3')} cuadros</span>
+        <b>${valor('imgs', v.imgs ?? '', '8')} img/s</b></div>`;
   }
   return '';
+}
+
+// Elegir el gráfico es un clic, como agregar. Van con los campos escribibles,
+// solo en modo editar: escondidos pero puestos, en el celular la fila se parte
+// en dos y la tarjeta en reposo crece un renglón de más.
+function elegirGraficoHTML(toma, editando) {
+  if (!editando) return '';
+  return [...GRAFICOS, ['', 'Ninguno']]
+    .map(([tipo, texto]) =>
+      `<button class="oculto${(toma.grafico || '') === tipo ? ' elegido' : ''}"`
+      + ` data-accion="grafico" data-grafico="${tipo}">${texto}</button>`)
+    .join('');
 }
 
 // `editando` hace escribibles los textos de la tarjeta. En reposo no lo son,
@@ -67,8 +91,9 @@ export function tarjetaHTML(toma, { editando = false } = {}) {
     <h3>${codigo}<span class="que"${escribible('queHacer', '¿Qué hay que hacer?')}>${escapar(toma.queHacer)}</span>${arrastrada}
       <button class="mark" data-accion="hecha" aria-label="Marcar como hecha"></button></h3>
     ${detalle}
-    ${graficoHTML(toma)}
-    <button class="oculto borrar" data-accion="borrar-toma" aria-label="Borrar el trabajo">Borrar</button>
+    ${graficoHTML(toma, editando)}
+    <div class="tools">${elegirGraficoHTML(toma, editando)}
+      <button class="oculto borrar" data-accion="borrar-toma" aria-label="Borrar el trabajo">Borrar</button></div>
   </article>`;
 }
 
