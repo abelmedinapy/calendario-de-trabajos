@@ -221,6 +221,25 @@ body{
   padding:11px 20px;font:inherit;font-weight:600;font-size:14px;cursor:pointer;
 }
 
+/* ---------- la puerta ---------- */
+.entrar{max-width:34ch;margin:14vh auto 0;padding:0 8px 40px;text-align:left}
+.entrar h1{
+  font-family:'Bricolage Grotesque',Figtree,sans-serif;
+  font-size:38px;font-weight:500;letter-spacing:-.02em;
+}
+.entrar p{color:var(--dim);font-size:15px;line-height:1.5;margin-top:12px}
+.entrar form{display:flex;gap:10px;margin-top:22px;flex-wrap:wrap}
+.entrar input{
+  flex:1 1 180px;min-width:0;background:var(--ink2);border:1px solid var(--line);
+  border-radius:999px;padding:12px 18px;color:var(--fg);font:inherit;font-size:15px;
+}
+.entrar input:focus{outline:2px solid var(--acid);outline-offset:2px;border-color:transparent}
+.entrar button{
+  background:var(--acid);color:#14170D;border:0;border-radius:999px;
+  padding:12px 22px;font:inherit;font-weight:600;font-size:15px;cursor:pointer;
+}
+.entrar .error{color:#E08070;flex-basis:100%;margin-top:0}
+
 /* ---------- scrubber ---------- */
 .scrub{
   display:flex;align-items:center;gap:6px;background:var(--ink2);

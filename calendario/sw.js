@@ -1,5 +1,7 @@
-// Los archivos de la app salen del cache; la API siempre va a la red. Así el
-// tablero abre aunque no haya internet, con lo último que quedó guardado.
+// Los archivos de la app se piden a la red y se guardan de paso; si no hay red,
+// salen del cache. Al revés (cache primero) la app abría rápido pero se quedaba
+// con la versión vieja hasta que cambiara el nombre del cache, y entonces una
+// corrección podía no llegar nunca. La API nunca se guarda.
 
 import { listaDeArchivos, VERSION } from './src/archivos.js';
 
@@ -25,12 +27,14 @@ self.addEventListener('fetch', (evento) => {
   if (new URL(pedido.url).pathname.startsWith('/api/')) return;
 
   evento.respondWith(
-    caches.match(pedido).then((guardado) => guardado || fetch(pedido).then((respuesta) => {
-      if (respuesta.ok) {
-        const copia = respuesta.clone();
-        caches.open(VERSION).then((cache) => cache.put(pedido, copia));
-      }
-      return respuesta;
-    }))
+    fetch(pedido)
+      .then((respuesta) => {
+        if (respuesta.ok) {
+          const copia = respuesta.clone();
+          caches.open(VERSION).then((cache) => cache.put(pedido, copia));
+        }
+        return respuesta;
+      })
+      .catch(() => caches.match(pedido).then((guardado) => guardado || Response.error()))
   );
 });

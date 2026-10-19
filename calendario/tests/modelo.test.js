@@ -110,3 +110,18 @@ test('una toma normalizada tiene todos los campos del modelo', () => {
     'enCurso', 'grafico', 'graficoValores', 'hecha', 'id', 'orden', 'proyecto', 'queHacer'
   ]);
 });
+
+test('con incluirVacios aparecen también los proyectos sin tomas ese día', () => {
+  const grupos = agruparPorProyecto(estadoDeEjemplo(), DIA, { incluirVacios: true });
+  assert.deepEqual(grupos.map((g) => g.proyecto.id), ['p1', 'p2', 'p3', 'p4']);
+  assert.deepEqual(grupos[3].pendientes, []);
+});
+
+test('ni con incluirVacios aparecen los archivados', () => {
+  const e = normalizarEstado({ proyectos: [{ id: 'p1', nombre: 'Viejo', archivado: true }] });
+  assert.deepEqual(agruparPorProyecto(e, DIA, { incluirVacios: true }), []);
+});
+
+test('contadores no cuenta los proyectos vacíos', () => {
+  assert.equal(contadores(estadoDeEjemplo(), DIA).proyectos, 3);
+});

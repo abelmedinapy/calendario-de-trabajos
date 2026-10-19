@@ -62,13 +62,16 @@ function porOrden(a, b) {
   return a.orden - b.orden || a.actualizado.localeCompare(b.actualizado);
 }
 
-export function agruparPorProyecto(estado, fecha) {
+// `incluirVacios` es para el modo editar: en reposo un proyecto sin tomas no
+// ensucia el tablero, pero si no se ve nunca se le puede agregar la primera.
+export function agruparPorProyecto(estado, fecha, { incluirVacios = false } = {}) {
   const grupos = [];
   for (const p of estado.proyectos) {
+    if (p.archivado) continue;
     const suyas = estado.tomas
       .filter((t) => t.proyecto === p.id && t.diaActual === fecha)
       .sort(porOrden);
-    if (suyas.length === 0) continue;
+    if (suyas.length === 0 && !incluirVacios) continue;
     grupos.push({
       proyecto: p,
       hechas: suyas.filter((t) => t.hecha),

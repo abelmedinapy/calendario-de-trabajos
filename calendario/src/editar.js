@@ -163,8 +163,25 @@ export function conectar(raiz, acciones) {
     if (tarjeta) acciones.enCurso?.({ toma: tarjeta.dataset.toma });
   });
 
-  raiz.addEventListener('blur', (evento) => {
+  // El objetivo se guarda mientras se escribe, con un respiro de medio segundo.
+  // Atado solo al blur se perdía cuando el teclado del celular se cierra sin
+  // sacarle el foco al campo.
+  let reloj = null;
+  const guardarObjetivo = (campo) => {
+    clearTimeout(reloj);
+    reloj = setTimeout(() => acciones.objetivo?.({ texto: campo.textContent }), 500);
+  };
+
+  raiz.addEventListener('input', (evento) => {
     const campo = evento.target.closest('[data-accion="objetivo"]');
-    if (campo) acciones.objetivo?.({ texto: campo.textContent });
-  }, true);
+    if (campo) guardarObjetivo(campo);
+  });
+
+  raiz.addEventListener('focusout', (evento) => {
+    const campo = evento.target.closest('[data-accion="objetivo"]');
+    if (campo) {
+      clearTimeout(reloj);
+      acciones.objetivo?.({ texto: campo.textContent });
+    }
+  });
 }

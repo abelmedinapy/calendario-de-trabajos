@@ -1,3 +1,5 @@
 node_modules/
 .DS_Store
 vista-previa.html
+.dev.vars
+.wrangler/

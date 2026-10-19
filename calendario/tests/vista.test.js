@@ -124,3 +124,14 @@ test('el botón de marcar hecha no está oculto: es parte del dibujo', () => {
 test('hay un botón para mostrar los controles', () => {
   assert.match(tableroHTML(conProyectos(1), HOY), /data-accion="editar"/);
 });
+
+test('en modo editar se ve el proyecto que todavía no tiene tomas', () => {
+  const estado = normalizarEstado({ proyectos: [{ id: 'p1', nombre: 'Fortaleza' }] });
+  assert.doesNotMatch(tableroHTML(estado, HOY), /Fortaleza/);
+  assert.match(tableroHTML(estado, HOY, { editando: true }), /Fortaleza/);
+});
+
+test('un proyecto vacío en modo editar trae su botón de agregar toma', () => {
+  const estado = normalizarEstado({ proyectos: [{ id: 'p1', nombre: 'Fortaleza' }] });
+  assert.match(tableroHTML(estado, HOY, { editando: true }), /data-accion="nueva-toma"/);
+});

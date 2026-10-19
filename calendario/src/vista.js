@@ -95,8 +95,8 @@ export function scrubberHTML(estado, fecha) {
   return `<nav class="scrub">${celdas}</nav>`;
 }
 
-export function tableroHTML(estado, fecha) {
-  const grupos = agruparPorProyecto(estado, fecha);
+export function tableroHTML(estado, fecha, { editando = false } = {}) {
+  const grupos = agruparPorProyecto(estado, fecha, { incluirVacios: editando });
   const n = contadores(estado, fecha);
   const delDia = estado.dias.find((d) => d.fecha === fecha);
 
