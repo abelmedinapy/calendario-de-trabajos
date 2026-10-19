@@ -91,8 +91,8 @@ test('un texto larguísimo no mete atributos de ancho en el HTML', () => {
 });
 
 test('el scrubber marca el día abierto y los días con trabajo', () => {
-  const html = scrubberHTML(conProyectos(1), HOY);
-  assert.equal(cuantos(html, /class="day[^"]*now/g), 1);
+  const html = scrubberHTML(conProyectos(1), HOY, { hoy: HOY });
+  assert.equal(cuantos(html, /class="day[^"]*abierto/g), 1);
   assert.ok(cuantos(html, /has/g) >= 1);
 });
 
@@ -222,4 +222,56 @@ test('el tablero pasa el modo editar a sus tarjetas', () => {
   });
   assert.doesNotMatch(tableroHTML(estado, HOY), /data-campo="queHacer"/);
   assert.match(tableroHTML(estado, HOY, { editando: true }), /data-campo="queHacer"/);
+});
+
+test('en la pantalla se dice trabajo, no toma', () => {
+  const html = tableroHTML(conProyectos(1), HOY, { editando: true });
+  assert.match(html, /Agregar trabajo/);
+  assert.match(html, />Trabajos</);
+  assert.doesNotMatch(html, /Agregar una toma|>Tomas</);
+});
+
+test('un trabajo recién agregado se dibuja vacío, listo para escribirle', () => {
+  const estado = normalizarEstado({
+    proyectos: [{ id: 'p1', nombre: 'Fortaleza' }],
+    tomas: [{ id: 't1', proyecto: 'p1', queHacer: '', diaActual: HOY }]
+  });
+  const html = tableroHTML(estado, HOY, { editando: true });
+  assert.match(html, /data-campo="queHacer"[^>]*data-vacio="¿Qué hay que hacer\?"/);
+  assert.match(html, /data-toma="t1"/);
+});
+
+test('un proyecto recién agregado se dibuja con el nombre vacío', () => {
+  const estado = normalizarEstado({ proyectos: [{ id: 'p1', nombre: '' }] });
+  const html = tableroHTML(estado, HOY, { editando: true });
+  assert.match(html, /data-campo="nombre"/);
+  assert.match(html, /data-campo="etiqueta"/);
+  assert.match(html, /data-proyecto="p1"/);
+});
+
+test('en reposo el nombre del proyecto no es editable', () => {
+  const estado = normalizarEstado({
+    proyectos: [{ id: 'p1', nombre: 'Fortaleza' }],
+    tomas: [{ id: 't1', proyecto: 'p1', queHacer: 'roto', diaActual: HOY }]
+  });
+  assert.doesNotMatch(tableroHTML(estado, HOY), /data-campo="nombre"/);
+});
+
+test('si el día abierto no es hoy, el título lo dice en vez de mentir', () => {
+  const html = tableroHTML(VACIO, '2026-10-21', { hoy: HOY });
+  assert.doesNotMatch(html, /class="title">Hoy</);
+  assert.match(html, /miércoles 21 de octubre/);
+  assert.match(html, /data-accion="hoy"/);
+});
+
+test('en el día de hoy el título dice Hoy y no ofrece volver', () => {
+  const html = tableroHTML(VACIO, HOY, { hoy: HOY });
+  assert.match(html, /class="title">Hoy</);
+  assert.doesNotMatch(html, /data-accion="hoy"/);
+});
+
+test('el día abierto se marca fuerte en el scrubber', () => {
+  const html = scrubberHTML(VACIO, '2026-10-21', { hoy: HOY });
+  assert.match(html, /class="day[^"]*abierto[^"]*"[^>]*data-dia="2026-10-21"/);
+  assert.match(html, /class="day[^"]*hoy[^"]*"[^>]*data-dia="2026-10-18"/);
 });

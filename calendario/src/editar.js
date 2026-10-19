@@ -93,6 +93,73 @@ export function ponerEnCurso(estado, tomaId) {
 }
 
 const TEXTOS_DE_TOMA = ['queHacer', 'codigo', 'detalle'];
+const TEXTOS_DE_PROYECTO = ['nombre', 'etiqueta'];
+
+// Agregar es un clic y escribir en la tarjeta misma. El borrador nace vacío y
+// no viaja a la nube: lo que lo sube es el primer texto. Si queda vacío se va
+// sin dejar lápida, porque nunca llegó a existir afuera.
+export function agregarBorradorDeToma(estado, { proyecto, dia } = {}) {
+  if (!proyecto || !dia) return nada(estado);
+  const hermanas = estado.tomas.filter((t) => t.proyecto === proyecto && !t.borrado);
+  const toma = {
+    id: nuevoId(),
+    proyecto,
+    codigo: '',
+    queHacer: '',
+    detalle: '',
+    diaOrigen: dia,
+    diaActual: dia,
+    hecha: false,
+    diaHecha: null,
+    enCurso: false,
+    borrado: false,
+    grafico: null,
+    graficoValores: null,
+    orden: hermanas.length ? Math.max(...hermanas.map((t) => t.orden)) + 1 : 0,
+    actualizado: ahora()
+  };
+  return { estado: { ...estado, tomas: [...estado.tomas, toma] }, cambios: [] };
+}
+
+export function agregarBorradorDeProyecto(estado) {
+  const proyecto = {
+    id: nuevoId(),
+    nombre: '',
+    etiqueta: '',
+    color: COLORES[estado.proyectos.filter((p) => !p.borrado).length % COLORES.length],
+    archivado: false,
+    borrado: false,
+    actualizado: ahora()
+  };
+  return { estado: { ...estado, proyectos: [...estado.proyectos, proyecto] }, cambios: [] };
+}
+
+export function quitarBorradorVacio(estado, id, tabla = 'tomas') {
+  if (tabla === 'proyectos') {
+    const p = estado.proyectos.find((x) => x.id === id);
+    if (!p || p.nombre) return nada(estado);
+    return { estado: { ...estado, proyectos: estado.proyectos.filter((x) => x.id !== id) }, cambios: [] };
+  }
+  const t = estado.tomas.find((x) => x.id === id);
+  if (!t || t.queHacer) return nada(estado);
+  return { estado: { ...estado, tomas: estado.tomas.filter((x) => x.id !== id) }, cambios: [] };
+}
+
+export function ponerTextoDeProyecto(estado, proyectoId, campo, texto) {
+  if (!TEXTOS_DE_PROYECTO.includes(campo)) return nada(estado);
+  const viejo = estado.proyectos.find((p) => p.id === proyectoId);
+  if (!viejo) return nada(estado);
+
+  const limpio = (texto || '').trim();
+  if (campo === 'nombre' && !limpio) return nada(estado);
+  if (viejo[campo] === limpio) return nada(estado);
+
+  const nuevo = { ...viejo, [campo]: limpio, actualizado: ahora() };
+  return {
+    estado: { ...estado, proyectos: estado.proyectos.map((p) => (p.id === proyectoId ? nuevo : p)) },
+    cambios: [cambioDe('proyectos', nuevo)]
+  };
+}
 
 // Corregir lo que ya está escrito. Sin esto, una toma con un error se arregla
 // borrándola y escribiéndola de nuevo.
@@ -206,11 +273,19 @@ export function conectar(raiz, acciones) {
   function avisar(campo) {
     if (campo.dataset.accion === 'objetivo') {
       acciones.objetivo?.({ texto: campo.textContent });
-    } else {
+      return;
+    }
+    const tarjeta = campo.closest('[data-toma]');
+    if (tarjeta) {
       acciones.textoToma?.({
-        toma: campo.closest('[data-toma]')?.dataset.toma,
-        campo: campo.dataset.campo,
-        texto: campo.textContent
+        toma: tarjeta.dataset.toma, campo: campo.dataset.campo, texto: campo.textContent
+      });
+      return;
+    }
+    const columna = campo.closest('[data-proyecto]');
+    if (columna) {
+      acciones.textoProyecto?.({
+        proyecto: columna.dataset.proyecto, campo: campo.dataset.campo, texto: campo.textContent
       });
     }
   }

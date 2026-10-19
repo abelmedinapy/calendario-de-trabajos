@@ -4,7 +4,8 @@ import assert from 'node:assert/strict';
 import { normalizarEstado, agruparPorProyecto } from '../src/modelo.js';
 import {
   agregarProyecto, agregarToma, marcarHecha, ponerEnCurso, ponerObjetivo, borrar,
-  ponerTextoDeToma
+  ponerTextoDeToma, ponerTextoDeProyecto,
+  agregarBorradorDeToma, agregarBorradorDeProyecto, quitarBorradorVacio
 } from '../src/editar.js';
 
 const DIA = '2026-10-18';
@@ -170,5 +171,58 @@ test('un campo que no es de texto no se toca', () => {
 test('escribir el mismo texto no encola un cambio al pedo', () => {
   const estado = agregarToma(conProyecto(), { proyecto: 'p1', queHacer: 'roto', dia: DIA }).estado;
   const { cambios } = ponerTextoDeToma(estado, estado.tomas[0].id, 'queHacer', 'roto');
+  assert.deepEqual(cambios, []);
+});
+
+test('un borrador de toma nace vacío y todavía no se sube', () => {
+  const { estado, cambios } = agregarBorradorDeToma(conProyecto(), { proyecto: 'p1', dia: DIA });
+  assert.equal(estado.tomas.length, 1);
+  assert.equal(estado.tomas[0].queHacer, '');
+  assert.equal(estado.tomas[0].diaActual, DIA);
+  assert.deepEqual(cambios, [], 'un borrador vacío no tiene por qué viajar a la nube');
+});
+
+test('escribirle el texto al borrador es lo que lo sube', () => {
+  const { estado } = agregarBorradorDeToma(conProyecto(), { proyecto: 'p1', dia: DIA });
+  const id = estado.tomas[0].id;
+  const { estado: despues, cambios } = ponerTextoDeToma(estado, id, 'queHacer', 'Generar transición');
+  assert.equal(despues.tomas[0].queHacer, 'Generar transición');
+  assert.equal(cambios.length, 1);
+  assert.equal(cambios[0].fila.queHacer, 'Generar transición');
+});
+
+test('un borrador que queda vacío se va sin dejar rastro', () => {
+  const previo = conProyecto();
+  const { estado } = agregarBorradorDeToma(previo, { proyecto: 'p1', dia: DIA });
+  const { estado: despues, cambios } = quitarBorradorVacio(estado, estado.tomas[0].id);
+  assert.deepEqual(despues.tomas, []);
+  assert.deepEqual(cambios, [], 'nunca se subió, así que no hay lápida que mandar');
+});
+
+test('quitarBorradorVacio no toca una toma que sí tiene texto', () => {
+  const estado = agregarToma(conProyecto(), { proyecto: 'p1', queHacer: 'roto', dia: DIA }).estado;
+  const { estado: despues } = quitarBorradorVacio(estado, estado.tomas[0].id);
+  assert.equal(despues.tomas.length, 1);
+});
+
+test('un borrador de proyecto nace sin nombre y tampoco se sube', () => {
+  const { estado, cambios } = agregarBorradorDeProyecto(normalizarEstado(null));
+  assert.equal(estado.proyectos.length, 1);
+  assert.equal(estado.proyectos[0].nombre, '');
+  assert.deepEqual(cambios, []);
+});
+
+test('ponerle el nombre al proyecto es lo que lo sube', () => {
+  const { estado } = agregarBorradorDeProyecto(normalizarEstado(null));
+  const id = estado.proyectos[0].id;
+  const { estado: despues, cambios } = ponerTextoDeProyecto(estado, id, 'nombre', 'Fortaleza');
+  assert.equal(despues.proyectos[0].nombre, 'Fortaleza');
+  assert.equal(cambios[0].tabla, 'proyectos');
+});
+
+test('un proyecto sin nombre se va sin dejar rastro', () => {
+  const { estado } = agregarBorradorDeProyecto(normalizarEstado(null));
+  const { estado: despues, cambios } = quitarBorradorVacio(estado, estado.proyectos[0].id, 'proyectos');
+  assert.deepEqual(despues.proyectos, []);
   assert.deepEqual(cambios, []);
 });

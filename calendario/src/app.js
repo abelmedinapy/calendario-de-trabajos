@@ -9,8 +9,9 @@ import { sincronizar } from './sync.js';
 import { arrastrar } from './arrastre.js';
 import { tableroHTML } from './vista.js';
 import {
-  conectar, agregarProyecto, agregarToma, marcarHecha, ponerEnCurso, ponerObjetivo,
-  ponerTextoDeToma, borrar
+  conectar, marcarHecha, ponerEnCurso, ponerObjetivo,
+  ponerTextoDeToma, ponerTextoDeProyecto,
+  agregarBorradorDeToma, agregarBorradorDeProyecto, quitarBorradorVacio, borrar
 } from './editar.js';
 
 export function decidirArranque({ hayLlave, hayLocal, hayRed }) {
@@ -101,6 +102,25 @@ function arrancar() {
 
   let quedoPorDibujar = false;
 
+  // Si el cursor está adentro de un campo, dibujar() se posterga para no
+  // pisarlo — y entonces agregar algo parecía no hacer nada. Lo soltamos
+  // primero, que además guarda lo que estaba escrito.
+  function soltarElCampo() {
+    const activo = document.activeElement;
+    if (activo?.closest?.('[data-accion="objetivo"], [data-campo]')) activo.blur();
+  }
+
+  // Después de redibujar, el cursor va al campo recién creado.
+  function enfocar(selector) {
+    // El DOM ya está puesto cuando se llama, así que se enfoca de una. El
+    // requestAnimationFrame no sirve: en una pestaña de fondo puede no llegar.
+    const campo = raiz.querySelector(selector);
+    if (!campo) return;
+    campo.focus();
+    const sel = window.getSelection?.();
+    if (sel && campo.isContentEditable) sel.selectAllChildren(campo);
+  }
+
   function dibujar() {
     if (escribiendo()) {
       quedoPorDibujar = true;
@@ -181,34 +201,34 @@ function arrancar() {
       guardar(nuevo, cambios);
     },
 
+    // Agregar es un clic: aparece la tarjeta vacía y el cursor ya está adentro.
+    // Nada de ventanitas encadenadas.
     'nuevo-proyecto': () => {
-      const nombre = prompt('¿Cómo se llama el proyecto?');
-      if (nombre === null) return;
-      const etiqueta = prompt('¿Qué es? (VFX, Spot, Propio…)') ?? '';
-      const { estado: nuevo, cambios } = agregarProyecto(estado, { nombre, etiqueta });
-      // Recién creado no tiene tomas: encendemos el modo editar para que se vea
-      // y tenga al lado el botón de agregarle la primera.
-      if (cambios.length) editando = true;
-      guardar(nuevo, cambios);
+      soltarElCampo();
+      const { estado: nuevo } = agregarBorradorDeProyecto(estado);
+      estado = nuevo;
+      editando = true;
+      dibujar();
+      enfocar('[data-campo="nombre"]:empty');
     },
 
     'nueva-toma': ({ proyecto }) => {
-      const queHacer = prompt('¿Qué hay que hacer?');
-      if (queHacer === null) return;
-      const codigo = prompt('Código de la toma (T22, grade, out…)') ?? '';
-      const detalle = prompt('Un detalle, si hace falta') ?? '';
-      const { estado: nuevo, cambios } = agregarToma(estado, { proyecto, queHacer, codigo, detalle, dia });
-      guardar(nuevo, cambios);
+      soltarElCampo();
+      const { estado: nuevo } = agregarBorradorDeToma(estado, { proyecto, dia });
+      estado = nuevo;
+      editando = true;
+      dibujar();
+      enfocar('[data-campo="queHacer"]:empty');
     },
 
     'borrar-toma': ({ toma }) => {
-      if (!confirm('¿Borro esta toma?')) return;
+      if (!confirm('¿Borro este trabajo?')) return;
       const { estado: nuevo, cambios } = borrar(estado, 'tomas', toma);
       guardar(nuevo, cambios);
     },
 
     'borrar-proyecto': ({ proyecto }) => {
-      if (!confirm('¿Borro el proyecto y todas sus tomas?')) return;
+      if (!confirm('¿Borro el proyecto y todos sus trabajos?')) return;
       const { estado: nuevo, cambios } = borrar(estado, 'proyectos', proyecto);
       guardar(nuevo, cambios);
     },
@@ -219,12 +239,43 @@ function arrancar() {
     },
 
     textoToma: ({ toma, campo, texto }) => {
+      // Un trabajo que quedó sin texto nunca llegó a la nube: se va y listo.
+      if (campo === 'queHacer' && !texto.trim()) {
+        const { estado: nuevo, cambios } = quitarBorradorVacio(estado, toma, 'tomas');
+        if (cambios.length === 0 && nuevo !== estado) {
+          estado = nuevo;
+          almacen.guardarEstado(estado);
+          dibujar();
+        }
+        return;
+      }
       const { estado: nuevo, cambios } = ponerTextoDeToma(estado, toma, campo, texto);
       guardarSinDibujar(nuevo, cambios);
     },
 
+    textoProyecto: ({ proyecto, campo, texto }) => {
+      if (campo === 'nombre' && !texto.trim()) {
+        const { estado: nuevo, cambios } = quitarBorradorVacio(estado, proyecto, 'proyectos');
+        if (cambios.length === 0 && nuevo !== estado) {
+          estado = nuevo;
+          almacen.guardarEstado(estado);
+          dibujar();
+        }
+        return;
+      }
+      const { estado: nuevo, cambios } = ponerTextoDeProyecto(estado, proyecto, campo, texto);
+      guardarSinDibujar(nuevo, cambios);
+    },
+
     dia: ({ dia: elegido }) => {
+      soltarElCampo();
       dia = elegido;
+      dibujar();
+    },
+
+    hoy: () => {
+      soltarElCampo();
+      dia = hoy();
       dibujar();
     }
   });

@@ -21,6 +21,6 @@ export function loQueDiceRender(estado, fecha) {
     : '';
 
   return arrastradas.length === 1
-    ? `Ayer quedó 1 toma${deQuien} sin cerrar.`
-    : `Ayer quedaron ${arrastradas.length} tomas${deQuien} sin cerrar.`;
+    ? `Ayer quedó 1 trabajo${deQuien} sin cerrar.`
+    : `Ayer quedaron ${arrastradas.length} trabajos${deQuien} sin cerrar.`;
 }

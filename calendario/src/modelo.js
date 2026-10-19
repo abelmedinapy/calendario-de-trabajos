@@ -74,6 +74,7 @@ export function agruparPorProyecto(estado, fecha, { incluirVacios = false } = {}
   const grupos = [];
   for (const p of estado.proyectos) {
     if (p.archivado || p.borrado) continue;
+    if (!p.nombre && !incluirVacios) continue;
     const suyas = estado.tomas
       .filter((t) => !t.borrado && t.proyecto === p.id && t.diaActual === fecha)
       .sort(porOrden);

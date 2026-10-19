@@ -1,7 +1,7 @@
 // Los datos entran, sale HTML. No se toca el DOM acá: así la vista se puede
 // probar sin navegador y el DOM queda solo en editar.js y app.js.
 
-import { fechaLarga, nombreCorto, ventanaScrubber, diasDeAtraso } from './dia.js';
+import { fechaLarga, nombreCorto, ventanaScrubber, diasDeAtraso, hoy as hoyReal } from './dia.js';
 import { agruparPorProyecto, contadores } from './modelo.js';
 import { diasConTrabajo } from './arrastre.js';
 import { loQueDiceRender } from './render-dice.js';
@@ -53,7 +53,7 @@ export function tarjetaHTML(toma, { editando = false } = {}) {
     : '';
 
   const escribible = (campo, vacio) => editando
-    ? ` contenteditable="plaintext-only" data-campo="${campo}" data-vacio="${vacio}"`
+    ? ` contenteditable="plaintext-only" data-campo="${campo}" data-vacio="${escapar(vacio)}"`
     : '';
 
   const codigo = (toma.codigo || editando)
@@ -64,11 +64,11 @@ export function tarjetaHTML(toma, { editando = false } = {}) {
     : '';
 
   return `<article class="card${toma.enCurso ? ' live' : ''}" data-toma="${escapar(toma.id)}">
-    <h3>${codigo}<span class="que"${escribible('queHacer', '')}>${escapar(toma.queHacer)}</span>${arrastrada}
+    <h3>${codigo}<span class="que"${escribible('queHacer', '¿Qué hay que hacer?')}>${escapar(toma.queHacer)}</span>${arrastrada}
       <button class="mark" data-accion="hecha" aria-label="Marcar como hecha"></button></h3>
     ${detalle}
     ${graficoHTML(toma)}
-    <button class="oculto borrar" data-accion="borrar-toma" aria-label="Borrar la toma">Borrar</button>
+    <button class="oculto borrar" data-accion="borrar-toma" aria-label="Borrar el trabajo">Borrar</button>
   </article>`;
 }
 
@@ -77,39 +77,42 @@ function chipHTML(toma) {
   return `<span class="chip" data-toma="${escapar(toma.id)}">
     <button class="marca" data-accion="hecha" aria-label="Volver a pendiente">✓</button>
     <s>${codigo}${escapar(toma.queHacer)}</s>
-    <button class="oculto borrar chico" data-accion="borrar-toma" aria-label="Borrar la toma">×</button></span>`;
+    <button class="oculto borrar chico" data-accion="borrar-toma" aria-label="Borrar el trabajo">×</button></span>`;
 }
 
 function columnaHTML(grupo, editando) {
-  const etiqueta = grupo.proyecto.etiqueta
-    ? `<span>${escapar(grupo.proyecto.etiqueta)}</span>` : '';
+  const escribible = (campo, vacio) => editando
+    ? ` contenteditable="plaintext-only" data-campo="${campo}" data-vacio="${escapar(vacio)}"`
+    : '';
+  const etiqueta = (grupo.proyecto.etiqueta || editando)
+    ? `<span${escribible('etiqueta', 'VFX, Spot…')}>${escapar(grupo.proyecto.etiqueta)}</span>` : '';
   const chips = grupo.hechas.length
     ? `<div class="chips">${grupo.hechas.map(chipHTML).join('')}</div>` : '';
   return `<div class="col ${escapar(grupo.proyecto.color)}" data-proyecto="${escapar(grupo.proyecto.id)}">
     <span class="node"></span>
     <div class="elbow"></div>
-    <div class="pname"><h2>${escapar(grupo.proyecto.nombre)}</h2>${etiqueta}
+    <div class="pname"><h2${escribible('nombre', '¿Qué proyecto?')}>${escapar(grupo.proyecto.nombre)}</h2>${etiqueta}
       <button class="oculto borrar" data-accion="borrar-proyecto" aria-label="Borrar el proyecto">Borrar</button></div>
     ${chips}
     ${grupo.pendientes.map((t) => tarjetaHTML(t, { editando })).join('')}
-    <button class="oculto suma" data-accion="nueva-toma">Agregar una toma</button>
+    <button class="oculto suma" data-accion="nueva-toma">Agregar trabajo</button>
   </div>`;
 }
 
-export function scrubberHTML(estado, fecha) {
+export function scrubberHTML(estado, fecha, { hoy = hoyReal() } = {}) {
   const dias = ventanaScrubber(fecha, DIAS_SCRUBBER);
   const conTrabajo = diasConTrabajo(estado, dias);
   const celdas = dias.map((d) => {
     const { dia, numero } = nombreCorto(d);
-    const clases = ['day', d === fecha ? 'now' : '', conTrabajo.has(d) ? 'has' : '']
-      .filter(Boolean).join(' ');
+    const clases = ['day', d === fecha ? 'abierto' : '', d === hoy ? 'hoy' : '',
+      conTrabajo.has(d) ? 'has' : ''].filter(Boolean).join(' ');
     return `<button class="${clases}" data-dia="${d}">
       <span class="bump"></span><u>${dia}</u>${numero}</button>`;
   }).join('');
   return `<nav class="scrub">${celdas}</nav>`;
 }
 
-export function tableroHTML(estado, fecha, { editando = false } = {}) {
+export function tableroHTML(estado, fecha, { editando = false, hoy = hoyReal() } = {}) {
   // Un proyecto sin tomas no ensucia la captura de un día ya cargado, pero si
   // el día está vacío tiene que verse: si no, cargás un proyecto, el tablero
   // sigue diciendo "no hay nada anotado" y lo cargás otra vez.
@@ -128,12 +131,18 @@ export function tableroHTML(estado, fecha, { editando = false } = {}) {
 
   const riel = grupos.length
     ? `<div class="rail"><div class="cols">${grupos.map((g) => columnaHTML(g, editando)).join('')}</div>
-        <button class="oculto suma nuevo" data-accion="nuevo-proyecto">Agregar un proyecto</button></div>`
+        <button class="oculto suma nuevo" data-accion="nuevo-proyecto">Agregar proyecto</button></div>`
     : `<div class="rail vacio"><p>Todavía no hay nada anotado para hoy.</p>
-        <button class="agregar" data-accion="nuevo-proyecto">Agregar un proyecto</button></div>`;
+        <button class="agregar" data-accion="nuevo-proyecto">Agregar proyecto</button></div>`;
+
+  const esHoy = fecha === hoy;
+  const titulo = esHoy
+    ? `<h1 class="title">Hoy<em>${escapar(fechaLarga(fecha))}</em></h1>`
+    : `<h1 class="title otroDia">${escapar(fechaLarga(fecha))}</h1>
+       <button class="volver" data-accion="hoy">Volver a hoy</button>`;
 
   return `<header class="top">
-    <h1 class="title">Hoy<em>${escapar(fechaLarga(fecha))}</em></h1>
+    ${titulo}
     <button class="lapiz" data-accion="editar" aria-label="Mostrar los controles de editar">Editar</button>
   </header>
 
@@ -149,12 +158,12 @@ export function tableroHTML(estado, fecha, { editando = false } = {}) {
     </div>
     <div class="stats">
       <div class="stat"><span class="lbl">Proyectos</span><i>${n.proyectos}</i></div>
-      <div class="stat"><span class="lbl">Tomas</span><i>${n.tomas}</i></div>
+      <div class="stat"><span class="lbl">Trabajos</span><i>${n.tomas}</i></div>
       <div class="stat"><span class="lbl">Listas</span><i>${n.listas}<s>/${n.tomas}</s></i></div>
     </div>
   </section>
 
   ${aviso}
   ${riel}
-  ${scrubberHTML(estado, fecha)}`;
+  ${scrubberHTML(estado, fecha, { hoy })}`;
 }
