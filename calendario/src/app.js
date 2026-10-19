@@ -9,7 +9,7 @@ import { sincronizar } from './sync.js';
 import { arrastrar } from './arrastre.js';
 import { tableroHTML } from './vista.js';
 import {
-  conectar, marcarHecha, ponerEnCurso, ponerObjetivo,
+  conectar, marcarHecha, ponerEnCurso, ponerObjetivo, moverTrabajo,
   ponerTextoDeToma, ponerTextoDeProyecto,
   agregarBorradorDeToma, agregarBorradorDeProyecto, quitarBorradorVacio, borrar
 } from './editar.js';
@@ -47,6 +47,7 @@ function arrancar() {
   let editando = false;
   let sinSubir = 0;
   let rechazados = [];
+  let moviendo = null;
 
   const guardar = (nuevo, cambios) => {
     estado = nuevo;
@@ -127,7 +128,8 @@ function arrancar() {
       return;
     }
     quedoPorDibujar = false;
-    raiz.innerHTML = avisos() + tableroHTML(estado, dia, { editando });
+    raiz.innerHTML = avisos() + tableroHTML(estado, dia, { editando, moviendo: Boolean(moviendo) });
+    if (moviendo) raiz.querySelector(`[data-toma="${moviendo}"]`)?.classList.add('moviendo');
     raiz.classList.toggle('editando', editando);
   }
 
@@ -221,6 +223,14 @@ function arrancar() {
       enfocar('[data-campo="queHacer"]:empty');
     },
 
+    // Mover: se toca "Mover de día" en el trabajo y después el día en la barra
+    // de abajo. Sin arrastrar nada, que en el celular no se puede.
+    mover: ({ toma }) => {
+      soltarElCampo();
+      moviendo = moviendo === toma ? null : toma;
+      dibujar();
+    },
+
     'borrar-toma': ({ toma }) => {
       if (!confirm('¿Borro este trabajo?')) return;
       const { estado: nuevo, cambios } = borrar(estado, 'tomas', toma);
@@ -228,7 +238,15 @@ function arrancar() {
     },
 
     'borrar-proyecto': ({ proyecto }) => {
-      if (!confirm('¿Borro el proyecto y todos sus trabajos?')) return;
+      // El Borrar del proyecto se lleva todo lo que tiene adentro. Que lo diga
+      // con nombre y número antes, no después.
+      const p = estado.proyectos.find((x) => x.id === proyecto);
+      const suyas = estado.tomas.filter((t) => t.proyecto === proyecto && !t.borrado);
+      const cuantos = suyas.length === 1 ? 'su 1 trabajo' : `sus ${suyas.length} trabajos`;
+      const pregunta = suyas.length
+        ? `¿Borro el proyecto ${p?.nombre || ''} y ${cuantos}?`
+        : `¿Borro el proyecto ${p?.nombre || ''}?`;
+      if (!confirm(pregunta)) return;
       const { estado: nuevo, cambios } = borrar(estado, 'proyectos', proyecto);
       guardar(nuevo, cambios);
     },
@@ -269,6 +287,12 @@ function arrancar() {
 
     dia: ({ dia: elegido }) => {
       soltarElCampo();
+      if (moviendo) {
+        const { estado: nuevo, cambios } = moverTrabajo(estado, moviendo, elegido);
+        moviendo = null;
+        guardar(nuevo, cambios);
+        return;
+      }
       dia = elegido;
       dibujar();
     },

@@ -314,3 +314,23 @@ test('AM está en el tablero y dice cómo viene el día', () => {
 test('sin nada anotado AM no muestra avance inventado', () => {
   assert.match(tableroHTML(VACIO, HOY), /data-avance="0"/);
 });
+
+test('lo que mandaste a un día futuro no figura como atrasado', () => {
+  const futuro = unaToma({ diaOrigen: HOY, diaActual: '2026-10-21' });
+  assert.doesNotMatch(tarjetaHTML(futuro, { hoy: HOY }), /class="late"/);
+});
+
+test('lo que viene arrastrándose de antes sí dice cuántos días lleva', () => {
+  const viejo = unaToma({ diaOrigen: '2026-10-15', diaActual: HOY });
+  assert.match(tarjetaHTML(viejo, { hoy: HOY }), /3 días/);
+});
+
+test('cada trabajo trae su botón de mover de día, oculto como el de borrar', () => {
+  assert.match(tarjetaHTML(unaToma()), /class="oculto"[^>]*data-accion="mover"/);
+});
+
+test('cuando hay un trabajo esperando destino, el scrubber lo dice', () => {
+  const html = scrubberHTML(VACIO, HOY, { hoy: HOY, moviendo: true });
+  assert.match(html, /class="scrub eligiendo"/);
+  assert.match(html, /¿A qué día/);
+});

@@ -5,7 +5,7 @@ import { normalizarEstado, agruparPorProyecto } from '../src/modelo.js';
 import {
   agregarProyecto, agregarToma, marcarHecha, ponerEnCurso, ponerObjetivo, borrar,
   ponerTextoDeToma, ponerTextoDeProyecto,
-  agregarBorradorDeToma, agregarBorradorDeProyecto, quitarBorradorVacio
+  agregarBorradorDeToma, agregarBorradorDeProyecto, quitarBorradorVacio, moverTrabajo
 } from '../src/editar.js';
 
 const DIA = '2026-10-18';
@@ -225,4 +225,22 @@ test('un proyecto sin nombre se va sin dejar rastro', () => {
   const { estado: despues, cambios } = quitarBorradorVacio(estado, estado.proyectos[0].id, 'proyectos');
   assert.deepEqual(despues.proyectos, []);
   assert.deepEqual(cambios, []);
+});
+
+test('mover un trabajo a otro día lo saca del día de hoy', () => {
+  const estado = agregarToma(conProyecto(), { proyecto: 'p1', queHacer: 'roto', dia: DIA }).estado;
+  const { estado: despues, cambios } = moverTrabajo(estado, estado.tomas[0].id, '2026-10-19');
+  assert.equal(despues.tomas[0].diaActual, '2026-10-19');
+  assert.equal(cambios.length, 1);
+});
+
+test('mover no toca el día en que nació: el historial queda', () => {
+  const estado = agregarToma(conProyecto(), { proyecto: 'p1', queHacer: 'roto', dia: DIA }).estado;
+  const { estado: despues } = moverTrabajo(estado, estado.tomas[0].id, '2026-10-21');
+  assert.equal(despues.tomas[0].diaOrigen, DIA);
+});
+
+test('mover al mismo día no encola nada', () => {
+  const estado = agregarToma(conProyecto(), { proyecto: 'p1', queHacer: 'roto', dia: DIA }).estado;
+  assert.deepEqual(moverTrabajo(estado, estado.tomas[0].id, DIA).cambios, []);
 });

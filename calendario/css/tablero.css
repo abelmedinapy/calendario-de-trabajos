@@ -291,6 +291,10 @@ body{
 .entrar .error{color:#E08070;flex-basis:100%;margin-top:0}
 
 /* ---------- scrubber ---------- */
+.scrub.eligiendo{box-shadow:inset 0 0 0 1px var(--acid)}
+.eligiendo-txt{padding:0 12px;font-size:12.5px;color:var(--acid);white-space:nowrap}
+.scrub.eligiendo .day:hover{background:var(--acid);color:#14170D}
+.card.moviendo{border-color:var(--acid);box-shadow:0 0 0 3px rgba(215,242,75,.15)}
 .scrub{
   display:flex;align-items:center;gap:6px;background:var(--ink2);
   border-radius:999px;padding:9px 12px;margin:26px 2px 16px;

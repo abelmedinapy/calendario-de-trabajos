@@ -180,6 +180,18 @@ export function ponerTextoDeToma(estado, tomaId, campo, texto) {
   };
 }
 
+// Mover a mano. El día en que nació no se toca: es lo que deja ver después
+// cuánto viene arrastrándose algo.
+export function moverTrabajo(estado, tomaId, dia) {
+  const vieja = estado.tomas.find((t) => t.id === tomaId);
+  if (!vieja || !dia || vieja.diaActual === dia) return nada(estado);
+  const nueva = { ...vieja, diaActual: dia, actualizado: ahora() };
+  return {
+    estado: { ...estado, tomas: estado.tomas.map((t) => (t.id === tomaId ? nueva : t)) },
+    cambios: [cambioDe('tomas', nueva)]
+  };
+}
+
 export function ponerObjetivo(estado, fecha, texto) {
   const viejo = estado.dias.find((d) => d.fecha === fecha);
   const dia = {

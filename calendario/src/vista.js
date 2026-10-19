@@ -46,8 +46,9 @@ function graficoHTML(toma) {
 
 // `editando` hace escribibles los textos de la tarjeta. En reposo no lo son,
 // así que la captura no se toca sin querer y no hay nada de más en la foto.
-export function tarjetaHTML(toma, { editando = false } = {}) {
-  const atraso = diasDeAtraso(toma.diaOrigen, toma.diaActual);
+export function tarjetaHTML(toma, { editando = false, hoy = hoyReal() } = {}) {
+  // Lo que mandaste a un día futuro no está atrasado: lo decidiste vos.
+  const atraso = toma.diaActual <= hoy ? diasDeAtraso(toma.diaOrigen, toma.diaActual) : 0;
   const arrastrada = atraso > 0
     ? `<span class="late">${atraso} ${atraso === 1 ? 'día' : 'días'}</span>`
     : '';
@@ -68,6 +69,7 @@ export function tarjetaHTML(toma, { editando = false } = {}) {
       <button class="mark" data-accion="hecha" aria-label="Marcar como hecha"></button></h3>
     ${detalle}
     ${graficoHTML(toma)}
+    <button class="oculto" data-accion="mover">Mover de día</button>
     <button class="oculto borrar" data-accion="borrar-toma" aria-label="Borrar el trabajo">Borrar</button>
   </article>`;
 }
@@ -81,7 +83,7 @@ function chipHTML(toma, cara = 0) {
     <button class="oculto borrar chico" data-accion="borrar-toma" aria-label="Borrar el trabajo">×</button></span>`;
 }
 
-function columnaHTML(grupo, editando, desdeCara = 0) {
+function columnaHTML(grupo, editando, desdeCara = 0, hoy = hoyReal()) {
   const escribible = (campo, vacio) => editando
     ? ` contenteditable="plaintext-only" data-campo="${campo}" data-vacio="${escapar(vacio)}"`
     : '';
@@ -95,12 +97,12 @@ function columnaHTML(grupo, editando, desdeCara = 0) {
     <div class="pname"><h2${escribible('nombre', '¿Qué proyecto?')}>${escapar(grupo.proyecto.nombre)}</h2>${etiqueta}
       <button class="oculto borrar" data-accion="borrar-proyecto" aria-label="Borrar el proyecto">Borrar</button></div>
     ${chips}
-    ${grupo.pendientes.map((t) => tarjetaHTML(t, { editando })).join('')}
+    ${grupo.pendientes.map((t) => tarjetaHTML(t, { editando, hoy })).join('')}
     <button class="oculto suma" data-accion="nueva-toma">Agregar trabajo</button>
   </div>`;
 }
 
-export function scrubberHTML(estado, fecha, { hoy = hoyReal() } = {}) {
+export function scrubberHTML(estado, fecha, { hoy = hoyReal(), moviendo = false } = {}) {
   const dias = ventanaScrubber(fecha, DIAS_SCRUBBER);
   const conTrabajo = diasConTrabajo(estado, dias);
   const celdas = dias.map((d) => {
@@ -110,10 +112,11 @@ export function scrubberHTML(estado, fecha, { hoy = hoyReal() } = {}) {
     return `<button class="${clases}" data-dia="${d}">
       <span class="bump"></span><u>${dia}</u>${numero}</button>`;
   }).join('');
-  return `<nav class="scrub">${celdas}</nav>`;
+  const aviso = moviendo ? '<span class="eligiendo-txt">¿A qué día lo paso?</span>' : '';
+  return `<nav class="scrub${moviendo ? ' eligiendo' : ''}">${aviso}${celdas}</nav>`;
 }
 
-export function tableroHTML(estado, fecha, { editando = false, hoy = hoyReal() } = {}) {
+export function tableroHTML(estado, fecha, { editando = false, hoy = hoyReal(), moviendo = false } = {}) {
   // Un proyecto sin tomas no ensucia la captura de un día ya cargado, pero si
   // el día está vacío tiene que verse: si no, cargás un proyecto, el tablero
   // sigue diciendo "no hay nada anotado" y lo cargás otra vez.
@@ -131,7 +134,7 @@ export function tableroHTML(estado, fecha, { editando = false, hoy = hoyReal() }
     : '';
 
   const riel = grupos.length
-    ? `<div class="rail"><div class="cols">${grupos.map((g, i, todos) => columnaHTML(g, editando, todos.slice(0, i).reduce((n, x) => n + x.hechas.length, 0))).join('')}</div>
+    ? `<div class="rail"><div class="cols">${grupos.map((g, i, todos) => columnaHTML(g, editando, todos.slice(0, i).reduce((n, x) => n + x.hechas.length, 0), hoy)).join('')}</div>
         <button class="oculto suma nuevo" data-accion="nuevo-proyecto">Agregar proyecto</button></div>`
     : `<div class="rail vacio"><p>Todavía no hay nada anotado para hoy.</p>
         <button class="agregar" data-accion="nuevo-proyecto">Agregar proyecto</button></div>`;
@@ -169,5 +172,5 @@ export function tableroHTML(estado, fecha, { editando = false, hoy = hoyReal() }
 
   ${aviso}
   ${riel}
-  ${scrubberHTML(estado, fecha, { hoy })}`;
+  ${scrubberHTML(estado, fecha, { hoy, moviendo })}`;
 }
