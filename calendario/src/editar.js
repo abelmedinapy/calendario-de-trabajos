@@ -534,7 +534,10 @@ export function conectar(raiz, acciones) {
   let arrastrando = null;
 
   raiz.addEventListener('dragstart', (evento) => {
-    const tarjeta = evento.target.closest?.('[data-toma][draggable="true"]');
+    // Se arrastra desde el agarre, no desde cualquier lado de la tarjeta: el
+    // resto es texto que se escribe y se selecciona.
+    if (!evento.target.closest?.('.agarre')) return;
+    const tarjeta = evento.target.closest?.('[data-toma]');
     if (!tarjeta) return;
     arrastrando = tarjeta.dataset.toma;
     tarjeta.classList.add('arrastrando');

@@ -217,18 +217,29 @@ body{
 .oculto.chico{padding:2px 8px;font-size:14px;line-height:1}
 .oculto.flecha{padding:3px 10px;font-size:13px;line-height:1.2}
 
-/* Arrastrar para cambiar el orden. En el celular no hay arrastre, por eso
-   están también las flechas. */
-.card[draggable="true"]{cursor:grab}
+/* Arrastrar para cambiar el orden, agarrando de las puntitas. En el celular no
+   hay arrastre, por eso están también las flechas. */
+.agarre{
+  position:absolute;left:4px;top:50%;transform:translateY(-50%);
+  cursor:grab;color:var(--dim);font-size:15px;line-height:1;
+  padding:10px 4px;user-select:none;opacity:0;transition:opacity .12s ease;
+}
+.card:hover .agarre,.col:focus-within .agarre,#tablero.editando .agarre{opacity:.8}
+.agarre:hover{color:var(--fg);opacity:1}
+.agarre:active{cursor:grabbing}
+.card{position:relative}
 .card.arrastrando{opacity:.45;cursor:grabbing}
 .card.destino{box-shadow:0 -3px 0 var(--acid)}
 .chip s{text-decoration:line-through;text-decoration-color:var(--line);overflow-wrap:anywhere}
 
 /* En pausa: sigue a la vista, pero se corre del centro de atención. */
-.col.pausado{opacity:.55}
-.col.pausado:hover,.col.pausado:focus-within{opacity:1}
-.col.pausado .node{background:var(--line)}
-.col.pausado::before{background:var(--line);opacity:.5}
+/* En pausa: se apagan las tarjetas, no el título — el cartel tiene que leerse
+   igual, y pasar el mouse por encima no puede hacer desaparecer el aviso. */
+.col.pausado .card,.col.pausado .chips{opacity:.45}
+.col.pausado .card:hover{opacity:1}
+.col.pausado h2{color:var(--dim)}
+.col.pausado .node{background:var(--warn)}
+.col.pausado::before{background:var(--warn);opacity:.45}
 .pausa{
   font-size:10.5px;font-weight:700;letter-spacing:.1em;color:var(--warn);
   border:1px solid var(--warn);border-radius:999px;padding:3px 9px;white-space:nowrap;

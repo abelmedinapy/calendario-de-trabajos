@@ -88,7 +88,11 @@ export function tarjetaHTML(toma, { editando = false, hoy = hoyReal() } = {}) {
     ? `<p${escribible('detalle', 'Un detalle, si hace falta')}>${escapar(toma.detalle)}</p>`
     : '';
 
-  return `<article class="card${toma.enCurso ? ' live' : ''}" data-toma="${escapar(toma.id)}"${editando ? ' draggable="true"' : ''}>
+  const agarre = editando
+    ? '<span class="agarre" draggable="true" title="Arrastrar para cambiar el orden">⠿</span>'
+    : '';
+  return `<article class="card${toma.enCurso ? ' live' : ''}" data-toma="${escapar(toma.id)}">
+    ${agarre}
     <h3>${codigo}<span class="que"${escribible('queHacer', '¿Qué hay que hacer?')}>${escapar(toma.queHacer)}</span>${arrastrada}
       <button class="mark" data-accion="hecha" aria-label="Marcar como hecha"></button></h3>
     ${detalle}

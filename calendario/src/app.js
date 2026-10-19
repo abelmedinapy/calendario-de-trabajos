@@ -403,5 +403,15 @@ function arrancar() {
     navigator.serviceWorker.register('./sw.js', { type: 'module' }).catch(() => {
       // sin service worker la app anda igual, solo que necesita internet
     });
+
+    // Cuando se publica una versión nueva, el worker nuevo toma el control y
+    // la app se recarga sola una vez. Si no, Abel tiene que acordarse de
+    // cerrar y abrir cada vez, y termina usando una versión vieja sin saberlo.
+    let recargando = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (recargando) return;
+      recargando = true;
+      location.reload();
+    });
   }
 }

@@ -464,3 +464,13 @@ test('el botón dice reanudar cuando ya está en pausa', () => {
   });
   assert.match(tableroHTML(estado, HOY), /data-accion="pausar">Reanudar</);
 });
+
+test('la tarjeta trae un agarre para arrastrarla, y el agarre es lo que se arrastra', () => {
+  const html = tarjetaHTML(unaToma(), { editando: true });
+  assert.match(html, /class="agarre"[^>]*draggable="true"/);
+  assert.doesNotMatch(html, /<article[^>]*draggable="true"/);
+});
+
+test('en reposo no hay agarre', () => {
+  assert.doesNotMatch(tarjetaHTML(unaToma()), /class="agarre"/);
+});
