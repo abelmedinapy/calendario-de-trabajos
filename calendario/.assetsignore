@@ -1,0 +1,10 @@
+worker/
+tests/
+node_modules/
+package.json
+package-lock.json
+wrangler.jsonc
+.assetsignore
+.gitignore
+README.md
+vista-previa.html
