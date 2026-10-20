@@ -22,11 +22,13 @@ test('una toma pendiente de ayer pasa a hoy', () => {
   assert.equal(estado.tomas[0].diaOrigen, '2026-10-17');
 });
 
-test('las tomas hechas no se mueven', () => {
+test('los trabajos terminados también se copian: el tablero queda igual', () => {
   const { estado, movidas } = arrastrar(
     conTomas({ diaOrigen: '2026-10-17', diaActual: '2026-10-17', hecha: true, diaHecha: '2026-10-17' }), HOY);
-  assert.deepEqual(movidas, []);
-  assert.equal(estado.tomas[0].diaActual, '2026-10-17');
+  assert.deepEqual(movidas, ['t1']);
+  assert.equal(estado.tomas[0].diaActual, HOY);
+  assert.equal(estado.tomas[0].hecha, true, 'sigue terminado');
+  assert.equal(estado.tomas[0].diaHecha, '2026-10-17', 'el día en que se terminó no se toca');
 });
 
 test('salta directo a hoy sin pasar por los días del medio', () => {

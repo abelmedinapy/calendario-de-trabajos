@@ -1,13 +1,16 @@
-// Lo que no se terminó no se pierde: al abrir un día nuevo salta directo a hoy,
-// sin pasar por los días del medio y sin borrar el día en que nació.
+// El tablero se copia al día siguiente tal cual quedó: lo pendiente y también
+// lo ya terminado, que sigue siendo parte de la lista del proyecto. Lo único
+// que no se copia es lo de un proyecto en pausa, que para eso se pausa.
+//
+// El día en que nació el trabajo y el día en que se terminó no se tocan: son
+// los que hacen que el scrubber marque dónde hubo trabajo de verdad.
 
 export function arrastrar(estado, hoy, ahora = new Date()) {
   const sello = ahora.toISOString();
   const movidas = [];
-  // Un proyecto en pausa no empuja nada hacia hoy: para eso se pausa.
   const enPausa = new Set(estado.proyectos.filter((p) => p.pausado).map((p) => p.id));
   const tomas = estado.tomas.map((t) => {
-    if (t.borrado || t.hecha || t.diaActual >= hoy || enPausa.has(t.proyecto)) return t;
+    if (t.borrado || t.diaActual >= hoy || enPausa.has(t.proyecto)) return t;
     movidas.push(t.id);
     return { ...t, diaActual: hoy, actualizado: sello };
   });
